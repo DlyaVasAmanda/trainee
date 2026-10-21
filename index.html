@@ -156,6 +156,38 @@
   .empty{text-align:center;color:var(--mute);padding:36px 12px}
   .empty .btn{margin-top:14px}
 
+  /* Аккаунт */
+  .avatar{position:relative;width:42px;height:42px;flex:none;border-radius:50%;border:0;display:inline-flex;align-items:center;justify-content:center;
+    background:var(--surface);color:var(--ink);font:700 19px var(--f-display);cursor:pointer}
+  .avatar svg{width:22px;height:22px}
+  .sync-dot{width:10px;height:10px;border-radius:50%;background:var(--g-other);flex:none}
+  .avatar .sync-dot{position:absolute;right:-1px;bottom:-1px;box-shadow:0 0 0 2.5px var(--bg)}
+  .s-ok .sync-dot{background:var(--g-shoulders)}
+  .s-pending .sync-dot{background:var(--g-legs)}
+  .s-error .sync-dot,.s-auth .sync-dot{background:var(--g-chest)}
+  .s-off .sync-dot{display:none}
+  @media (prefers-reduced-motion:no-preference){ .s-pending .sync-dot{animation:pulse 1.2s ease-in-out infinite} }
+  @keyframes pulse{50%{opacity:.35}}
+  .avatar.big-av{width:52px;height:52px;font-size:24px;background:var(--surface-2);cursor:default}
+  .who{display:flex;align-items:center;gap:14px}
+  .status{display:flex;align-items:center;gap:8px}
+  .notice{background:var(--surface);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;box-shadow:inset 4px 0 0 var(--g-back)}
+  .row-btns{display:flex;gap:8px;margin-top:10px}
+  .seg{display:grid;grid-template-columns:1fr 1fr;gap:4px;padding:4px;background:var(--surface-2);border-radius:999px}
+  .seg button{height:40px;border:0;border-radius:999px;background:transparent;color:var(--mute);font:600 15px var(--f-body);cursor:pointer}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px color-mix(in srgb,var(--ink) 12%,transparent)}
+  .field{display:grid;gap:6px;font-size:14px;font-weight:500}
+  .msg{font-size:14px;padding:10px 12px;border-radius:var(--r-sm);background:var(--surface-2)}
+  .msg.error{color:var(--danger)}
+  .msg.ok{box-shadow:inset 3px 0 0 var(--g-shoulders)}
+  .btn[disabled]{opacity:.6;cursor:progress}
+  .gate{padding-top:12px}
+  .gate .gate-mark{margin-bottom:22px}
+  .gate .plate.big{--size:84px;--hole:var(--bg)}
+  body.no-nav nav{display:none}
+  body.no-nav #app{padding-bottom:calc(32px + env(safe-area-inset-bottom))}
+  code{font-size:.9em;background:var(--surface-2);padding:1px 5px;border-radius:5px}
+
   /* Нижняя навигация */
   nav{position:fixed;left:0;right:0;bottom:0;z-index:5;background:color-mix(in srgb,var(--surface) 88%,transparent);
     backdrop-filter:saturate(1.4) blur(14px);-webkit-backdrop-filter:saturate(1.4) blur(14px);border-top:1px solid var(--line);padding-bottom:env(safe-area-inset-bottom)}
@@ -171,6 +203,9 @@
 <body>
 <div id="app"></div>
 <nav><div class="in" id="nav"></div></nav>
+<script src="config.js"></script>
+<script src="vendor/supabase-2.117.2.js"></script>
+<script src="cloud.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

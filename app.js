@@ -3,35 +3,53 @@
    Тренировки — PWA, данные в IndexedDB (только на устройстве)
    ========================================================= */
 
-/* ---------- Хранилище ---------- */
-const DB_NAME = 'workout-tracker';
-const DB_VERSION = 2; // v1: exercises, workouts; v2: + templates, meta
-const STORES = ['exercises', 'workouts', 'templates', 'meta'];
+/* ---------- Хранилище ----------
+   Каждому пользователю — своя база IndexedDB (гость: 'workout-tracker', аккаунт: 'trainee-<uid>').
+   Данные пишутся сначала локально (работает офлайн), а изменения копятся в outbox
+   и отправляются в облако, когда есть сеть. */
+const GUEST_DB = 'workout-tracker';
+const DB_VERSION = 3; // v1: exercises, workouts; v2: + templates, meta; v3: + outbox
+const DATA_STORES = ['exercises', 'workouts', 'templates', 'meta'];
+const SYNCED_META = new Set(['plan']); // остальные ключи meta — локальные (seedV, lastPull, …)
 let db;
 
-const openDB = () => new Promise((res, rej) => {
-  const r = indexedDB.open(DB_NAME, DB_VERSION);
+const dbNameFor = user => user ? 'trainee-' + user.id : GUEST_DB;
+const openDB = name => new Promise((res, rej) => {
+  const r = indexedDB.open(name, DB_VERSION);
   r.onupgradeneeded = () => {
     const d = r.result;
-    if (!d.objectStoreNames.contains('exercises')) d.createObjectStore('exercises', { keyPath: 'id' });
-    if (!d.objectStoreNames.contains('workouts')) d.createObjectStore('workouts', { keyPath: 'id' });
-    if (!d.objectStoreNames.contains('templates')) d.createObjectStore('templates', { keyPath: 'id' });
+    for (const s of ['exercises', 'workouts', 'templates']) if (!d.objectStoreNames.contains(s)) d.createObjectStore(s, { keyPath: 'id' });
     if (!d.objectStoreNames.contains('meta')) d.createObjectStore('meta', { keyPath: 'key' });
+    if (!d.objectStoreNames.contains('outbox')) d.createObjectStore('outbox', { keyPath: 'key' });
   };
-  r.onsuccess = () => res(r.result);
+  r.onsuccess = () => { r.result.onversionchange = () => r.result.close(); res(r.result); };
   r.onerror = () => rej(r.error);
+  r.onblocked = () => rej(new Error('База открыта в другой вкладке — закрой её и обнови страницу'));
 });
-const run = (store, mode, fn) => new Promise((res, rej) => {
-  const t = db.transaction(store, mode);
+const run = (store, mode, fn, d = db) => new Promise((res, rej) => {
+  const t = d.transaction(store, mode);
   const req = fn(t.objectStore(store));
   t.oncomplete = () => res(req ? req.result : undefined);
   t.onerror = () => rej(t.error);
 });
-const getAll = s => run(s, 'readonly', st => st.getAll());
-const getOne = (s, k) => run(s, 'readonly', st => st.get(k));
-const put = (s, v) => run(s, 'readwrite', st => st.put(v));
-const del = (s, id) => run(s, 'readwrite', st => st.delete(id));
-const clearStore = s => run(s, 'readwrite', st => st.clear());
+const getAll = (s, d) => run(s, 'readonly', st => st.getAll(), d);
+const getOne = (s, k, d) => run(s, 'readonly', st => st.get(k), d);
+const put = (s, v, d) => run(s, 'readwrite', st => st.put(v), d);
+const del = (s, id, d) => run(s, 'readwrite', st => st.delete(id), d);
+const clearStore = (s, d) => run(s, 'readwrite', st => st.clear(), d);
+
+// Запись данных пользователя: метка времени изменения + очередь на отправку.
+// u = 1 у стартовых упражнений/шаблонов: любая правка с другого устройства их перекрывает.
+const recId = (s, v) => s === 'meta' ? v.key : v.id;
+const syncable = (s, id) => s !== 'meta' || SYNCED_META.has(id);
+async function dataPut(s, v, u = Date.now()) {
+  v._u = u; await put(s, v);
+  if (CLOUD.user && syncable(s, recId(s, v))) { await put('outbox', { key: s + '|' + recId(s, v), kind: s, id: recId(s, v), _u: u, deleted: false }); scheduleSync(); }
+}
+async function dataDel(s, id) {
+  await del(s, id);
+  if (CLOUD.user && syncable(s, id)) { await put('outbox', { key: s + '|' + id, kind: s, id, _u: Date.now(), deleted: true }); scheduleSync(); }
+}
 
 /* ---------- Справочники ---------- */
 const TYPES = { strength: 'Со штангой/гантелями', bodyweight: 'Свой вес', cardio: 'Кардио' };
@@ -91,37 +109,47 @@ const active = () => S.workouts.find(w => !w.finished);
 const finished = () => S.workouts.filter(w => w.finished).sort((a, b) => b.start - a.start);
 const sortEx = () => S.exercises.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
-async function load() {
+async function reloadState() {
   S.exercises = await getAll('exercises');
   S.workouts = await getAll('workouts');
   S.templates = await getAll('templates');
   S.plan = (await getOne('meta', 'plan')) || { key: 'plan', days: Array(7).fill(null) };
-  const seed = (await getOne('meta', 'seedV')) || { key: 'seedV', v: 0 };
-  if (seed.v < 2) await migrate();
+  if (!Array.isArray(S.plan.days) || S.plan.days.length !== 7) S.plan.days = Array(7).fill(null);
   sortEx();
   S.templates.sort((a, b) => (a.created || 0) - (b.created || 0) || a.name.localeCompare(b.name, 'ru'));
 }
+async function load() {
+  await reloadState();
+  const seed = (await getOne('meta', 'seedV')) || { key: 'seedV', v: 0 };
+  if (seed.v < 2) { await migrate(); await reloadState(); }
+}
 
-// v1 → v2: группы мышц у старых упражнений, новые упражнения сплита, шаблоны и план недели
+// Детерминированные id стартовых данных: на всех устройствах одного аккаунта они совпадают,
+// поэтому при синхронизации не появляются дубликаты.
+const hash = s => { let h = 0x811c9dc5; for (const c of s) { h ^= c.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; } return h.toString(36); };
+const seedExId = name => 'ex-' + hash(name);
+const SEED_U = 1;
+
+// v1 → v2 (и первый запуск): группы мышц, упражнения сплита, шаблоны и план недели
 async function migrate() {
   const names = new Set(S.exercises.map(e => e.name));
   for (const e of S.exercises) {
-    if (!e.group) { e.group = SEED_GROUP[e.name] || (e.type === 'cardio' ? 'cardio' : 'other'); await put('exercises', e); }
+    if (!e.group) { e.group = SEED_GROUP[e.name] || (e.type === 'cardio' ? 'cardio' : 'other'); await dataPut('exercises', e); }
   }
   for (const [name, type, group] of SEED_EX) {
     if (names.has(name)) continue;
-    const e = { id: uid(), name, type, group };
-    S.exercises.push(e); await put('exercises', e);
+    const e = { id: seedExId(name), name, type, group };
+    S.exercises.push(e); await dataPut('exercises', e, SEED_U);
   }
   if (!S.templates.length) {
     const byName = n => S.exercises.find(e => e.name === n);
     const days = Array(7).fill(null);
     for (const [k, [name, items, day]] of SEED_TPL.entries()) {
-      const t = { id: uid(), created: Date.now() + k, name, items: items.filter(([n]) => byName(n)).map(([n, sets, reps]) => ({ exId: byName(n).id, sets, reps })) };
-      S.templates.push(t); await put('templates', t);
+      const t = { id: 'tpl-' + hash(name), created: k + 1, name, items: items.filter(([n]) => byName(n)).map(([n, sets, reps]) => ({ exId: byName(n).id, sets, reps })) };
+      S.templates.push(t); await dataPut('templates', t, SEED_U);
       days[day] = t.id;
     }
-    S.plan = { key: 'plan', days }; await put('meta', S.plan);
+    S.plan = { key: 'plan', days }; await dataPut('meta', S.plan, SEED_U);
   }
   await put('meta', { key: 'seedV', v: 2 });
 }
@@ -179,10 +207,11 @@ const ICON = {
   progress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17l5.5-5.5 4 4 7.5-8"/><path d="M15.5 7.5h5v5"/></svg>',
   ex: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.8 4-5.6 7.5-5.6s6.3 1.8 7.5 5.6"/></svg>',
 };
 
 /* ---------- Действия: тренировка ---------- */
-const saveW = w => put('workouts', w);
+const saveW = w => dataPut('workouts', w);
 async function startWorkout(tplId) {
   if (active()) return;
   const t = tplId ? tplById(tplId) : null;
@@ -197,13 +226,13 @@ async function finishWorkout() {
   w.entries = w.entries.filter(e => e.sets.length);
   if (!w.entries.length) {
     if (!confirm('Нет ни одного подхода — тренировка не сохранится. Завершить?')) return;
-    await del('workouts', w.id); S.workouts = S.workouts.filter(x => x !== w);
+    await dataDel('workouts', w.id); S.workouts = S.workouts.filter(x => x !== w);
   } else { w.finished = true; w.end = Date.now(); await saveW(w); }
   S.adding = false; S.selDay = null; render(true);
 }
 async function discardWorkout() {
   const w = active(); if (!w || !confirm('Отменить тренировку? Записанные подходы удалятся.')) return;
-  await del('workouts', w.id); S.workouts = S.workouts.filter(x => x !== w); S.adding = false; render(true);
+  await dataDel('workouts', w.id); S.workouts = S.workouts.filter(x => x !== w); S.adding = false; render(true);
 }
 async function addEntry(exId) {
   const w = active(); if (!w || !exId) return;
@@ -224,32 +253,32 @@ async function delSet(exId, i) { const w = active(); w.entries.find(e => e.exId 
 async function delEntry(exId) { const w = active(); w.entries = w.entries.filter(e => e.exId !== exId); await saveW(w); render(); }
 async function delWorkout(id) {
   if (!confirm('Удалить тренировку из истории?')) return;
-  await del('workouts', id); S.workouts = S.workouts.filter(w => w.id !== id); render();
+  await dataDel('workouts', id); S.workouts = S.workouts.filter(w => w.id !== id); render();
 }
 
 /* ---------- Действия: план и шаблоны ---------- */
-async function setPlanDay(day, tplId) { S.plan.days[day] = tplId || null; await put('meta', S.plan); render(); }
+async function setPlanDay(day, tplId) { S.plan.days[day] = tplId || null; await dataPut('meta', S.plan); render(); }
 async function newTemplate() {
   const t = { id: uid(), created: Date.now(), name: 'Новый шаблон', items: [] };
-  S.templates.push(t); await put('templates', t); S.editTpl = t.id; render();
+  S.templates.push(t); await dataPut('templates', t); S.editTpl = t.id; render();
   document.querySelector('[data-tpl-name]')?.select();
 }
 async function deleteTemplate(id) {
   const t = tplById(id);
   if (!confirm(`Удалить шаблон «${t.name}»? Он пропадёт из плана недели.`)) return;
-  await del('templates', id); S.templates = S.templates.filter(x => x.id !== id);
-  S.plan.days = S.plan.days.map(d => d === id ? null : d); await put('meta', S.plan);
+  await dataDel('templates', id); S.templates = S.templates.filter(x => x.id !== id);
+  S.plan.days = S.plan.days.map(d => d === id ? null : d); await dataPut('meta', S.plan);
   S.editTpl = null; render();
 }
 async function tplAddEx(id, exId) {
   const t = tplById(id); if (!exId) return;
   const cardio = exById(exId)?.type === 'cardio';
-  t.items.push({ exId, sets: cardio ? 1 : 3, reps: cardio ? 30 : 10 }); await put('templates', t); render();
+  t.items.push({ exId, sets: cardio ? 1 : 3, reps: cardio ? 30 : 10 }); await dataPut('templates', t); render();
 }
-async function tplRemoveItem(id, i) { const t = tplById(id); t.items.splice(i, 1); await put('templates', t); render(); }
+async function tplRemoveItem(id, i) { const t = tplById(id); t.items.splice(i, 1); await dataPut('templates', t); render(); }
 async function tplMoveItem(id, i, d) {
   const t = tplById(id), j = i + d; if (j < 0 || j >= t.items.length) return;
-  [t.items[i], t.items[j]] = [t.items[j], t.items[i]]; await put('templates', t); render();
+  [t.items[i], t.items[j]] = [t.items[j], t.items[i]]; await dataPut('templates', t); render();
 }
 
 /* ---------- Действия: упражнения ---------- */
@@ -258,14 +287,14 @@ async function addExercise(form) {
   if (!name) return shake(form);
   if (S.exercises.some(e => e.name.toLowerCase() === name.toLowerCase())) { alert('Такое упражнение уже есть'); return; }
   const e = { id: uid(), name, type: form.querySelector('[name=type]').value, group: form.querySelector('[name=group]').value };
-  await put('exercises', e); S.exercises.push(e); sortEx(); render();
+  await dataPut('exercises', e); S.exercises.push(e); sortEx(); render();
 }
 async function delExercise(id) {
   const used = S.workouts.some(w => w.entries.some(e => e.exId === id));
   const ex = exById(id);
   if (!confirm(used ? `«${ex.name}» есть в истории. Удалить? В истории оно станет «удалено».` : `Удалить «${ex.name}»?`)) return;
-  await del('exercises', id); S.exercises = S.exercises.filter(e => e.id !== id);
-  for (const t of S.templates) if (t.items.some(i => i.exId === id)) { t.items = t.items.filter(i => i.exId !== id); await put('templates', t); }
+  await dataDel('exercises', id); S.exercises = S.exercises.filter(e => e.id !== id);
+  for (const t of S.templates) if (t.items.some(i => i.exId === id)) { t.items = t.items.filter(i => i.exId !== id); await dataPut('templates', t); }
   render();
 }
 
@@ -292,12 +321,14 @@ async function importJSON(file) {
   let d;
   try { d = JSON.parse(await file.text()); if (!Array.isArray(d.exercises) || !Array.isArray(d.workouts)) throw 0; }
   catch { alert('Файл не похож на резервную копию трекера (нужен JSON из «Экспорт JSON»).'); return; }
-  if (!confirm('Импорт заменит все текущие данные. Продолжить?')) return;
-  for (const s of STORES) await clearStore(s);
-  for (const e of d.exercises) await put('exercises', e);
-  for (const w of d.workouts) await put('workouts', w);
-  for (const t of d.templates || []) await put('templates', t);
-  if (d.plan) await put('meta', { ...d.plan, key: 'plan' });
+  if (!confirm(CLOUD.user ? 'Импорт заменит все данные аккаунта на всех устройствах. Продолжить?' : 'Импорт заменит все текущие данные. Продолжить?')) return;
+  const incoming = { exercises: d.exercises, workouts: d.workouts, templates: d.templates || [] };
+  for (const s of Object.keys(incoming)) {
+    const keep = new Set(incoming[s].map(x => x.id));
+    for (const old of await getAll(s)) if (!keep.has(old.id)) await dataDel(s, old.id); // удаление уходит и в облако
+    for (const x of incoming[s]) await dataPut(s, x);
+  }
+  if (d.plan) await dataPut('meta', { key: 'plan', days: d.plan.days });
   await put('meta', { key: 'seedV', v: d.v >= 2 ? 2 : 1 }); // старый формат → догоним миграцией
   await load(); render(true);
 }
@@ -358,7 +389,8 @@ function viewToday() {
   if (dw.length) body += dw.map(x => `<div class="done-note"><span class="dot" style="--c:var(--g-shoulders)"></span>
       Выполнено: ${esc(x.title || 'тренировка')}, ${setCount(x)} ${plural(setCount(x), 'подход', 'подхода', 'подходов')}, ${mins(x)} мин</div>`).join('');
 
-  return `<header class="head"><div><h1>${DOW_FULL[today]}</h1><div class="sub">${longDate(Date.now())}</div></div></header>
+  return `<header class="head"><div><h1>${DOW_FULL[today]}</h1><div class="sub">${longDate(Date.now())}</div></div>${avatarBtn()}</header>
+    ${mergeOffer()}
     ${weekStrip(sel)}
     <section class="sheet">${body}</section>
     <button class="btn ghost block" style="margin-top:8px" data-a="start">Свободная тренировка</button>`;
@@ -368,7 +400,7 @@ function viewToday() {
 function viewActive(w) {
   const taken = w.entries.map(e => e.exId);
   return `<header class="head"><div><h1>${esc(w.title || 'Тренировка')}</h1>
-      <div class="sub live">Идёт <span id="elapsed">${mins(w)} мин</span></div></div></header>
+      <div class="sub live">Идёт <span id="elapsed">${mins(w)} мин</span></div></div>${avatarBtn()}</header>
     <div class="stack">${w.entries.map(entryCard).join('')}</div>
     <div style="margin-top:10px">${S.adding
       ? `<div class="sheet" style="padding:14px"><div class="add-row"><select id="addSel" aria-label="Упражнение"><option value="">Выбери упражнение</option>${exOptions(taken)}</select>
@@ -543,29 +575,318 @@ function viewExercises() {
           <span class="tag">${TYPE_SHORT[e.type]}</span><button class="icon-btn" data-a="delEx" data-id="${e.id}" aria-label="Удалить ${esc(e.name)}">${ICON.x}</button></div>`).join('')}</div></div>` : '';
     }).join('')}
     <div class="section"><h3>Резервная копия</h3>
-      <p class="mute small" style="margin:6px 0 10px">Данные хранятся только в этом браузере. Сохраняй JSON раз в неделю, чтобы не потерять историю.</p>
+      <p class="mute small" style="margin:6px 0 10px">${CLOUD.user
+        ? 'Данные синхронизируются с аккаунтом. Файл JSON — дополнительная копия на всякий случай.'
+        : 'Данные хранятся только в этом браузере. Сохраняй JSON раз в неделю или войди в аккаунт, чтобы не потерять историю.'}</p>
       <div style="display:flex;flex-wrap:wrap;gap:8px"><button class="btn sm" data-a="expJSON">Экспорт JSON</button><button class="btn sm" data-a="expCSV">Экспорт CSV</button>
         <button class="btn sm" data-a="imp">Импорт JSON</button><input type="file" accept="application/json,.json" hidden id="impFile"></div></div>`;
+}
+
+/* =========================================================
+   Аккаунт и синхронизация
+   ========================================================= */
+// Текущий пользователь хранится локально: приложение открывается и работает офлайн,
+// даже если токен истёк. Сессия Supabase нужна только для синхронизации.
+const CLOUD = { user: null, syncing: false, pending: 0, lastSync: null, error: null, needAuth: false };
+const LS = {
+  get(k) { try { return JSON.parse(localStorage.getItem(k)); } catch { return null; } },
+  set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, JSON.stringify(v)); } catch { /* приватный режим */ } },
+};
+const LS_USER = 'trainee-user', LS_GUEST = 'trainee-guest', LS_LASTSYNC = 'trainee-last-sync';
+const PULL_OVERLAP_MS = 60_000; // перекрытие курсора: не теряем записи параллельных транзакций
+
+function syncState() {
+  if (!Cloud || !CLOUD.user) return 'off';
+  if (CLOUD.needAuth) return 'auth';
+  if (!navigator.onLine) return 'offline';
+  if (CLOUD.error) return 'error';
+  if (CLOUD.syncing || CLOUD.pending) return 'pending';
+  return 'ok';
+}
+const SYNC_TEXT = {
+  off: 'Без аккаунта', ok: 'Синхронизировано', pending: 'Синхронизация…', offline: 'Нет сети — изменения сохранятся на телефоне',
+  error: 'Ошибка синхронизации', auth: 'Сессия истекла — войди снова',
+};
+
+function avatarBtn() {
+  if (!Cloud) return '';
+  const u = CLOUD.user, st = syncState();
+  return `<button class="avatar s-${st}" data-tab="account" aria-label="${u ? 'Аккаунт, ' + SYNC_TEXT[st] : 'Войти в аккаунт'}">
+    ${u ? esc((u.email || '?')[0].toUpperCase()) : ICON.user}<span class="sync-dot" aria-hidden="true"></span></button>`;
+}
+function refreshSyncUI() {
+  const st = syncState();
+  document.querySelectorAll('.avatar').forEach(a => { a.classList.remove(...[...a.classList].filter(c => c.startsWith('s-'))); a.classList.add('s-' + st); });
+  const el = document.getElementById('syncStatus');
+  if (el) el.innerHTML = syncStatusHTML();
+}
+function syncStatusHTML() {
+  const st = syncState();
+  const when = CLOUD.lastSync ? `Последняя синхронизация: ${new Date(CLOUD.lastSync).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : 'Ещё не синхронизировано';
+  return `<div class="status s-${st}"><span class="sync-dot"></span><b>${SYNC_TEXT[st]}</b></div>
+    <p class="mute small" style="margin-top:4px">${CLOUD.error && st === 'error' ? esc(CLOUD.error) + '. ' : ''}${when}${CLOUD.pending ? `. В очереди: ${CLOUD.pending}` : ''}</p>`;
+}
+
+/* --- Отправка и получение --- */
+async function pushOutbox() {
+  const box = await getAll('outbox');
+  if (!box.length) return;
+  for (let i = 0; i < box.length; i += 200) {
+    const part = box.slice(i, i + 200), rows = [];
+    for (const o of part) {
+      const rec = o.deleted ? null : await getOne(o.kind, o.id);
+      rows.push({ user_id: CLOUD.user.id, kind: o.kind, id: o.id, data: rec || null, deleted: !rec, updated_at: o._u });
+    }
+    await Cloud.push(rows);
+    for (const o of part) { const cur = await getOne('outbox', o.key); if (cur && cur._u === o._u) await del('outbox', o.key); }
+  }
+}
+async function pullChanges() {
+  const lp = await getOne('meta', 'lastPull');
+  // Обрезаем микросекунды: Safari не всегда разбирает 6 знаков дробной части
+  const since = lp ? new Date(new Date(lp.ts.replace(/(\.\d{3})\d+/, '$1')).getTime() - PULL_OVERLAP_MS).toISOString() : null;
+  const rows = await Cloud.pull(since);
+  let changed = 0, maxTs = lp ? lp.ts : null;
+  for (const r of rows) {
+    if (!maxTs || r.server_ts > maxTs) maxTs = r.server_ts;
+    if (!DATA_STORES.includes(r.kind) || !syncable(r.kind, r.id)) continue;
+    const key = r.kind + '|' + r.id;
+    const ob = await getOne('outbox', key);
+    if (ob && ob._u >= r.updated_at) continue; // локальная правка новее — уйдёт при следующей отправке
+    const local = await getOne(r.kind, r.id);
+    if (r.deleted || !r.data) { if (local) { await del(r.kind, r.id); changed++; } }
+    else if (!local || (local._u || 0) < r.updated_at) {
+      const data = { ...r.data, _u: r.updated_at };
+      if (r.kind === 'meta') data.key = r.id; else data.id = r.id;
+      await put(r.kind, data); changed++;
+    }
+    if (ob) await del('outbox', key);
+  }
+  if (maxTs) await put('meta', { key: 'lastPull', ts: maxTs });
+  return changed;
+}
+
+let syncTimer = null, syncAgain = false;
+function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms); }
+async function sync() {
+  if (!Cloud || !CLOUD.user || !db) return;
+  if (CLOUD.syncing) { syncAgain = true; return; }
+  if (!navigator.onLine) { CLOUD.pending = (await getAll('outbox').catch(() => [])).length; refreshSyncUI(); return; }
+  const forUser = CLOUD.user.id, forDb = db;
+  CLOUD.syncing = true; refreshSyncUI();
+  try {
+    const s = await Cloud.session();
+    if (!s || s.user.id !== forUser) { CLOUD.needAuth = true; return; }
+    CLOUD.needAuth = false;
+    await pushOutbox();
+    const changed = await pullChanges();
+    if (db !== forDb) return; // пользователь сменился во время синхронизации
+    CLOUD.error = null; CLOUD.lastSync = Date.now(); LS.set(LS_LASTSYNC + ':' + forUser, CLOUD.lastSync);
+    if (changed) { await reloadState(); softRender(); }
+  } catch (e) {
+    CLOUD.error = humanError(e);
+    if (/JWT|401|session/i.test(String(e && (e.message || e.code)))) CLOUD.needAuth = true;
+  } finally {
+    CLOUD.syncing = false;
+    if (db === forDb) CLOUD.pending = (await getAll('outbox').catch(() => [])).length;
+    refreshSyncUI();
+    if (syncAgain) { syncAgain = false; scheduleSync(300); }
+  }
+}
+
+// Не перерисовываем экран, пока человек печатает: применим изменения после ухода из поля
+const isEditing = () => { const a = document.activeElement; return a && a.closest('#app') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName); };
+function softRender() { if (isEditing()) S.pendingRender = true; else render(); }
+document.addEventListener('focusout', () => setTimeout(() => { if (S.pendingRender && !isEditing()) { S.pendingRender = false; render(); } }, 0));
+
+/* --- Вход / выход / смена пользователя --- */
+async function switchUser(user) {
+  const old = db; db = null; if (old) old.close(); // пока база не открыта, sync() ничего не делает
+  CLOUD.user = user ? { id: user.id, email: user.email } : null;
+  CLOUD.error = null; CLOUD.needAuth = false; CLOUD.pending = 0;
+  CLOUD.lastSync = user ? LS.get(LS_LASTSYNC + ':' + user.id) : null;
+  LS.set(LS_USER, CLOUD.user);
+  db = await openDB(dbNameFor(CLOUD.user));
+  Object.assign(S, { selDay: null, adding: false, editTpl: null, progressEx: null, mergeOffer: null });
+  await load();
+  if (CLOUD.user) { CLOUD.pending = (await getAll('outbox')).length; await checkGuestData(); }
+}
+
+function humanError(e) {
+  const m = String((e && (e.code || '') + ' ' + (e.message || '')) || e);
+  if (/invalid_credentials|Invalid login credentials/i.test(m)) return 'Неверный email или пароль';
+  if (/user_already_exists|already registered/i.test(m)) return 'Этот email уже зарегистрирован. Войди или сбрось пароль';
+  if (/email_not_confirmed|not confirmed/i.test(m)) return 'Email не подтверждён — открой ссылку из письма';
+  if (/weak_password|Password should|at least 6/i.test(m)) return 'Пароль слишком простой: минимум 6 символов';
+  if (/same_password|different from the old/i.test(m)) return 'Новый пароль должен отличаться от старого';
+  if (/rate limit|over_.*_rate_limit|too many/i.test(m)) return 'Слишком много попыток. Подожди минуту и попробуй снова';
+  if (/email_address_invalid|invalid.*email|validate email/i.test(m)) return 'Проверь адрес email';
+  if (/Failed to fetch|NetworkError|Load failed|network/i.test(m)) return 'Нет связи с сервером. Проверь интернет';
+  if (/relation .*records.* does not exist|PGRST205|42P01/i.test(m)) return 'В Supabase нет таблицы records — выполни supabase/schema.sql';
+  return 'Ошибка: ' + (e && e.message || m).trim();
+}
+
+async function submitAuth(form) {
+  const email = form.querySelector('[name=email]')?.value.trim();
+  const password = form.querySelector('[name=password]')?.value || '';
+  const mode = S.authMode || 'signin';
+  if (email != null) S.authEmail = email; // не теряем введённый email при перерисовке
+  const msg = (type, text) => { S.authMsg = { type, text }; S.authBusy = false; render(); };
+  if (mode !== 'newpass' && !/^\S+@\S+\.\S+$/.test(email || '')) return msg('error', 'Проверь адрес email');
+  if (mode !== 'reset' && password.length < 6) return msg('error', 'Пароль — минимум 6 символов');
+  S.authBusy = true; S.authMsg = null; S.authEmail = email || S.authEmail; render();
+  try {
+    if (mode === 'signin') {
+      const d = await Cloud.signIn(email, password);
+      await afterSignIn(d.user);
+    } else if (mode === 'signup') {
+      const d = await Cloud.signUp(email, password);
+      if (d.user && Array.isArray(d.user.identities) && d.user.identities.length === 0) return msg('error', humanError({ code: 'user_already_exists' }));
+      if (d.session) await afterSignIn(d.user);
+      else { S.authMode = 'signin'; msg('ok', `Письмо отправлено на ${email}. Открой ссылку из него, затем войди здесь.`); }
+    } else if (mode === 'reset') {
+      await Cloud.resetPassword(email);
+      S.authMode = 'signin'; msg('ok', `Ссылка для сброса пароля отправлена на ${email}.`);
+    } else if (mode === 'newpass') {
+      await Cloud.updatePassword(password);
+      S.recovery = false; S.authMode = 'signin'; S.authMsg = { type: 'ok', text: 'Пароль обновлён.' }; S.authBusy = false;
+      const s = await Cloud.session(); if (s) await afterSignIn(s.user); else render();
+    }
+  } catch (e) { msg('error', humanError(e)); }
+}
+async function afterSignIn(user) {
+  S.authBusy = false; S.authMsg = null; S.gate = false; S.reauth = false;
+  if (!CLOUD.user || CLOUD.user.id !== user.id) await switchUser(user);
+  S.tab = S.mergeOffer ? 'account' : 'today';
+  render(true); window.scrollTo(0, 0);
+  sync();
+}
+async function signOut() {
+  if (CLOUD.pending && !confirm(`${CLOUD.pending} ${plural(CLOUD.pending, 'изменение ещё не отправлено', 'изменения ещё не отправлены', 'изменений ещё не отправлено')} в облако. Они сохранятся на этом устройстве и уйдут после следующего входа. Выйти?`)) return;
+  try { await Cloud.signOut(); } catch { /* офлайн: локальная сессия всё равно удалится */ }
+  LS.set(LS_GUEST, null);
+  await switchUser(null);
+  S.gate = true; S.tab = 'today'; S.authMode = 'signin'; S.authMsg = null;
+  render(true);
+}
+function continueAsGuest() { LS.set(LS_GUEST, true); S.gate = false; S.tab = 'today'; render(true); }
+
+/* --- Перенос данных, записанных без аккаунта --- */
+async function checkGuestData() {
+  S.mergeOffer = null;
+  if (LS.get('trainee-merge-dismissed:' + CLOUD.user.id)) return;
+  let g;
+  try { g = await openDB(GUEST_DB); } catch { return; }
+  try {
+    const merged = await getOne('meta', 'mergedTo', g);
+    if (merged && merged.ids && merged.ids.includes(CLOUD.user.id)) return;
+    const n = (await getAll('workouts', g)).filter(w => w.finished).length;
+    if (n) S.mergeOffer = { count: n };
+  } finally { g.close(); }
+}
+async function mergeGuest() {
+  const g = await openDB(GUEST_DB);
+  try {
+    const [gx, gw, gt] = [await getAll('exercises', g), await getAll('workouts', g), await getAll('templates', g)];
+    const map = new Map();
+    for (const e of gx) {
+      const same = S.exercises.find(x => x.name.toLowerCase() === e.name.toLowerCase());
+      if (same) map.set(e.id, same.id);
+      else { const n = { id: uid(), name: e.name, type: e.type, group: e.group || 'other' }; await dataPut('exercises', n); S.exercises.push(n); map.set(e.id, n.id); }
+    }
+    const have = new Set(S.workouts.map(w => w.id));
+    for (const w of gw) {
+      if (!w.finished || have.has(w.id)) continue;
+      await dataPut('workouts', { ...w, templateId: null, entries: w.entries.map(e => ({ ...e, exId: map.get(e.exId) || e.exId })) });
+    }
+    for (const t of gt) {
+      if (S.templates.some(x => x.name === t.name)) continue;
+      await dataPut('templates', { ...t, id: uid(), created: Date.now(), items: t.items.map(i => ({ ...i, exId: map.get(i.exId) || i.exId })) });
+    }
+    const m = (await getOne('meta', 'mergedTo', g)) || { key: 'mergedTo', ids: [] };
+    m.ids.push(CLOUD.user.id); await put('meta', m, g);
+  } finally { g.close(); }
+  S.mergeOffer = null; await reloadState(); render(); sync();
+}
+function mergeOffer() {
+  if (!S.mergeOffer) return '';
+  const n = S.mergeOffer.count;
+  return `<section class="notice"><p><b>На этом устройстве есть ${n} ${plural(n, 'тренировка', 'тренировки', 'тренировок')} без аккаунта.</b>
+    Перенести в аккаунт? Упражнения с одинаковым названием объединятся.</p>
+    <div class="row-btns"><button class="btn primary sm" data-a="merge">Перенести</button><button class="btn ghost sm" data-a="mergeNo">Не сейчас</button></div></section>`;
+}
+
+/* --- Экран аккаунта / входа --- */
+function authForm() {
+  const m = S.authMode || 'signin';
+  const titles = { signin: 'Вход', signup: 'Регистрация', reset: 'Сброс пароля', newpass: 'Новый пароль' };
+  const submit = { signin: 'Войти', signup: 'Создать аккаунт', reset: 'Отправить ссылку', newpass: 'Сохранить пароль' };
+  const busy = S.authBusy ? 'disabled aria-busy="true"' : '';
+  return `<form class="sheet auth" data-form="auth" novalidate>
+    ${m === 'signin' || m === 'signup' ? `<div class="seg" role="tablist">
+      <button type="button" role="tab" aria-selected="${m === 'signin'}" class="${m === 'signin' ? 'on' : ''}" data-a="authMode" data-id="signin">Вход</button>
+      <button type="button" role="tab" aria-selected="${m === 'signup'}" class="${m === 'signup' ? 'on' : ''}" data-a="authMode" data-id="signup">Регистрация</button></div>`
+      : `<h2>${titles[m]}</h2>`}
+    <div class="stack" style="margin-top:14px">
+      ${m !== 'newpass' ? `<label class="field"><span>Email</span><input name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="${esc(S.authEmail || '')}" required></label>` : ''}
+      ${m !== 'reset' ? `<label class="field"><span>${m === 'newpass' ? 'Новый пароль' : 'Пароль'}</span><input name="password" type="password" autocomplete="${m === 'signin' ? 'current-password' : 'new-password'}" minlength="6" required></label>` : ''}
+      ${m === 'signup' || m === 'newpass' ? '<p class="mute small">Минимум 6 символов.</p>' : ''}
+      ${S.authMsg ? `<p class="msg ${S.authMsg.type}" role="${S.authMsg.type === 'error' ? 'alert' : 'status'}">${esc(S.authMsg.text)}</p>` : ''}
+      <button class="btn primary big block" type="submit" ${busy}>${S.authBusy ? 'Подожди…' : submit[m]}</button>
+      ${m === 'signin' ? '<button type="button" class="btn ghost sm" data-a="authMode" data-id="reset">Забыли пароль?</button>' : ''}
+      ${m === 'reset' ? '<button type="button" class="btn ghost sm" data-a="authMode" data-id="signin">Назад ко входу</button>' : ''}
+    </div></form>`;
+}
+function viewGate() {
+  return `<div class="gate">
+    <div class="gate-mark">${plate([['chest', 1], ['back', 1], ['legs', 1], ['shoulders', 1]], 'big')}</div>
+    <h1>Тренировки</h1>
+    <p class="sub" style="margin-bottom:20px">Войди, чтобы план и история были на телефоне и ноутбуке и не пропали при очистке браузера.</p>
+    ${authForm()}
+    <button class="btn ghost block" style="margin-top:10px" data-a="guest">Продолжить без аккаунта</button>
+    <p class="mute small" style="text-align:center;margin-top:4px">Без аккаунта данные хранятся только на этом устройстве.</p></div>`;
+}
+function viewAccount() {
+  const back = `<button class="btn ghost sm" data-tab="today" style="margin-left:-12px">‹ Назад</button>`;
+  if (!Cloud) return `${back}<header class="head"><h1>Аккаунт</h1></header>
+    <div class="sheet"><p>Облако не настроено: в <code>config.js</code> нет адреса Supabase. Приложение работает без аккаунтов, данные хранятся на устройстве.</p></div>`;
+  if (S.recovery) { S.authMode = 'newpass'; return `${back}<header class="head"><h1>Аккаунт</h1></header>${authForm()}`; }
+  if (CLOUD.user && S.reauth) return `${back}<header class="head"><div><h1>Вход</h1><div class="sub">Сессия истекла. Данные на устройстве в порядке — войди, чтобы продолжить синхронизацию.</div></div></header>${authForm()}
+    <button class="btn ghost block" style="margin-top:8px" data-a="reauthCancel">Отмена</button>`;
+  if (!CLOUD.user) return `${back}<header class="head"><div><h1>Аккаунт</h1><div class="sub">Сейчас данные хранятся только на этом устройстве</div></div></header>${authForm()}`;
+  return `${back}<header class="head"><h1>Аккаунт</h1></header>
+    ${mergeOffer()}
+    <section class="sheet">
+      <div class="who"><span class="avatar big-av s-${syncState()}">${esc((CLOUD.user.email || '?')[0].toUpperCase())}</span>
+        <div style="min-width:0"><div style="font-weight:600;overflow-wrap:anywhere">${esc(CLOUD.user.email || '')}</div>
+        <div class="mute small">План, шаблоны и история синхронизируются между устройствами</div></div></div>
+      <div id="syncStatus" style="margin-top:16px">${syncStatusHTML()}</div>
+      <div class="stack" style="margin-top:14px">
+        ${CLOUD.needAuth ? '<button class="btn primary block" data-a="reauth">Войти снова</button>' : '<button class="btn block" data-a="syncNow">Синхронизировать сейчас</button>'}
+        <button class="btn ghost danger block" data-a="signOut">Выйти</button>
+      </div></section>`;
 }
 
 /* =========================================================
    Рендер и события
    ========================================================= */
 const TABS = [['today', 'Сегодня'], ['plan', 'План'], ['history', 'История'], ['progress', 'Прогресс'], ['ex', 'Упражнения']];
-const VIEWS = { today: viewToday, plan: viewPlan, history: viewHistory, progress: viewProgress, ex: viewExercises };
+const VIEWS = { today: viewToday, plan: viewPlan, history: viewHistory, progress: viewProgress, ex: viewExercises, account: viewAccount };
 function render(spin = false) {
   S.spin = spin;
   const y = window.scrollY;
-  document.getElementById('app').innerHTML = VIEWS[S.tab]();
+  const gate = S.gate && !CLOUD.user;
+  document.body.classList.toggle('no-nav', gate);
+  document.getElementById('app').innerHTML = gate ? viewGate() : VIEWS[S.tab]();
   const rec = !!active();
-  document.getElementById('nav').innerHTML = TABS.map(([k, l]) =>
+  document.getElementById('nav').innerHTML = gate ? '' : TABS.map(([k, l]) =>
     `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''} ${k === 'today' && rec ? 'rec' : ''}" ${S.tab === k ? 'aria-current="page"' : ''}>${ICON[k]}${l}</button>`).join('');
   if (!spin) window.scrollTo(0, y);
 }
 
 document.addEventListener('click', ev => {
   const tab = ev.target.closest('[data-tab]');
-  if (tab) { S.tab = tab.dataset.tab; render(S.tab === 'today'); window.scrollTo(0, 0); return; }
+  if (tab) { S.tab = tab.dataset.tab; S.authMsg = null; render(S.tab === 'today'); window.scrollTo(0, 0); return; }
   const day = ev.target.closest('[data-day]');
   if (day) { S.selDay = +day.dataset.day; render(true); return; }
   const b = ev.target.closest('[data-a]'); if (!b) return;
@@ -592,6 +913,17 @@ document.addEventListener('click', ev => {
     expJSON: exportJSON,
     expCSV: exportCSV,
     imp: () => document.getElementById('impFile').click(),
+    authMode: () => {
+      const em = document.querySelector('[data-form=auth] [name=email]'); if (em) S.authEmail = em.value.trim();
+      S.authMode = id; S.authMsg = null; render(); document.querySelector('[data-form=auth] input')?.focus();
+    },
+    guest: continueAsGuest,
+    signOut,
+    syncNow: () => { CLOUD.error = null; sync(); },
+    reauth: () => { S.reauth = true; S.authEmail = CLOUD.user.email; S.authMode = 'signin'; S.authMsg = null; render(); },
+    reauthCancel: () => { S.reauth = false; render(); },
+    merge: mergeGuest,
+    mergeNo: () => { LS.set('trainee-merge-dismissed:' + CLOUD.user.id, true); S.mergeOffer = null; render(); },
   })[b.dataset.a]?.();
 });
 
@@ -602,8 +934,10 @@ document.addEventListener('keydown', ev => {
   if (card) { ev.preventDefault(); addSet(card.dataset.ex, card); }
 });
 document.addEventListener('submit', ev => {
-  const f = ev.target.closest('[data-form=addEx]');
-  if (f) { ev.preventDefault(); addExercise(f); }
+  const f = ev.target.closest('[data-form]'); if (!f) return;
+  ev.preventDefault();
+  if (f.dataset.form === 'addEx') addExercise(f);
+  if (f.dataset.form === 'auth' && !S.authBusy) submitAuth(f);
 });
 document.addEventListener('change', async ev => {
   const el = ev.target;
@@ -611,20 +945,44 @@ document.addEventListener('change', async ev => {
   else if (el.id === 'impFile' && el.files[0]) importJSON(el.files[0]);
   else if (el.dataset.planDay != null) setPlanDay(+el.dataset.planDay, el.value);
   else if (el.dataset.tplName) {
-    const t = tplById(el.dataset.tplName); t.name = el.value.trim() || 'Без названия'; await put('templates', t);
+    const t = tplById(el.dataset.tplName); t.name = el.value.trim() || 'Без названия'; await dataPut('templates', t);
   } else if (el.dataset.tpl) {
     // Без перерисовки: иначе потеряется фокус на следующем поле
     const t = tplById(el.dataset.tpl), n = Math.max(1, Math.round(num(el.value) || 1));
-    t.items[+el.dataset.i][el.dataset.k] = n; el.value = n; await put('templates', t);
+    t.items[+el.dataset.i][el.dataset.k] = n; el.value = n; await dataPut('templates', t);
   }
 });
 
 // Обновление таймера активной тренировки
 setInterval(() => { const el = document.getElementById('elapsed'), w = active(); if (el && w) el.textContent = mins(w) + ' мин'; }, 15000);
 
+// Когда синхронизировать: при появлении сети, при возврате в приложение и раз в минуту
+window.addEventListener('online', () => sync());
+window.addEventListener('offline', refreshSyncUI);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
+setInterval(() => { if (document.visibilityState === 'visible') sync(); }, 60_000);
+
 (async () => {
-  try { db = await openDB(); await load(); }
-  catch (err) { document.getElementById('app').innerHTML = `<div class="empty">Не удалось открыть хранилище браузера (${esc(err && err.message || err)}). Проверь, что не включён приватный режим.</div>`; return; }
+  try {
+    let user = LS.get(LS_USER);
+    if (Cloud && !user) {
+      // Например, вход по ссылке из письма: Supabase уже создал сессию
+      try { const s = await Cloud.session(); if (s) user = s.user; } catch { /* офлайн */ }
+    }
+    await switchUser(Cloud ? user : null);
+  } catch (err) {
+    document.getElementById('app').innerHTML = `<div class="empty">Не удалось открыть хранилище браузера (${esc(err && err.message || err)}). Проверь, что не включён приватный режим.</div>`;
+    return;
+  }
+  S.gate = !!Cloud && !CLOUD.user && !LS.get(LS_GUEST);
   render(true);
+  if (Cloud) {
+    Cloud.onAuth(async (event, session) => {
+      if (event === 'PASSWORD_RECOVERY') { S.recovery = true; S.gate = false; S.tab = 'account'; render(); return; }
+      if (event === 'SIGNED_IN' && session && (!CLOUD.user || CLOUD.user.id !== session.user.id) && !S.authBusy) await afterSignIn(session.user);
+      else if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') { CLOUD.needAuth = false; sync(); }
+    });
+    sync();
+  }
   if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
 })();
