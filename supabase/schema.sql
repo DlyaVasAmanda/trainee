@@ -62,4 +62,5 @@ create policy "records_delete_own" on public.records
   for delete to authenticated using ((select auth.uid()) = user_id);
 
 revoke all on public.records from anon;
+revoke truncate, references, trigger on public.records from authenticated; -- TRUNCATE обходит RLS
 grant select, insert, update, delete on public.records to authenticated;
