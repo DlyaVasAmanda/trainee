@@ -109,12 +109,62 @@ const active = () => S.workouts.find(w => !w.finished);
 const finished = () => S.workouts.filter(w => w.finished).sort((a, b) => b.start - a.start);
 const sortEx = () => S.exercises.sort((a, b) => a.name.localeCompare(b.name, 'ru'));
 
+/* ---------- Проверка данных ----------
+   Всё, что приходит извне (облако, импорт JSON, старая база), приводится к строгой форме:
+   id — только [A-Za-z0-9_-], числа — конечные и в разумных пределах, строки — обрезаны.
+   Это закрывает XSS через данные и не даёт испорченной записи сломать приложение. */
+const ID_RE = /^[A-Za-z0-9_-]{1,100}$/;
+const vId = v => typeof v === 'string' && ID_RE.test(v) ? v : null;
+const vNum = (v, min, max) => { const n = typeof v === 'number' ? v : typeof v === 'string' && v.trim() !== '' ? Number(v) : NaN; return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : null; };
+const vInt = (v, min, max) => { const n = vNum(v, min, max); return n == null ? null : Math.round(n); };
+const vStr = (v, max) => typeof v === 'string' ? v.slice(0, max) : typeof v === 'number' ? String(v) : '';
+const vArr = (v, max) => Array.isArray(v) ? v.slice(0, max) : [];
+const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
+function cleanSet(x) {
+  if (!isObj(x)) return null;
+  const s = {};
+  for (const [k, [min, max, int]] of Object.entries({ w: [0, 2000, false], r: [0, 10000, true], km: [0, 1000, false], min: [0, 10000, false] })) {
+    const n = int ? vInt(x[k], min, max) : vNum(x[k], min, max); if (n != null) s[k] = n;
+  }
+  return Object.keys(s).length ? s : null;
+}
+const cleanTarget = x => isObj(x) && vInt(x.sets, 1, 100) != null && vInt(x.reps, 1, 10000) != null ? { sets: vInt(x.sets, 1, 100), reps: vInt(x.reps, 1, 10000) } : undefined;
+const CLEAN = {
+  exercises(x) {
+    const id = isObj(x) && vId(x.id); if (!id) return null;
+    const name = vStr(x.name, 120).trim() || 'Без названия', type = TYPES[x.type] ? x.type : 'strength';
+    const group = GROUPS[x.group] ? x.group : SEED_GROUP[name] || (type === 'cardio' ? 'cardio' : 'other'); // старые записи без группы
+    return { id, name, type, group, _u: vNum(x._u, 0, 9e15) || 0 };
+  },
+  workouts(x) {
+    const id = isObj(x) && vId(x.id), start = isObj(x) && vNum(x.start, 0, 9e15); if (!id || start == null) return null;
+    const entries = vArr(x.entries, 100).map(e => {
+      const exId = isObj(e) && vId(e.exId); if (!exId) return null;
+      const o = { exId, sets: vArr(e.sets, 200).map(cleanSet).filter(Boolean) };
+      const t = cleanTarget(e.target); if (t) o.target = t;
+      return o;
+    }).filter(Boolean);
+    const end = vNum(x.end, 0, 9e15);
+    return { id, start, ...(end != null ? { end } : {}), finished: x.finished === true, title: vStr(x.title, 120), templateId: vId(x.templateId), entries, _u: vNum(x._u, 0, 9e15) || 0 };
+  },
+  templates(x) {
+    const id = isObj(x) && vId(x.id); if (!id) return null;
+    const items = vArr(x.items, 100).map(i => isObj(i) && vId(i.exId) ? { exId: i.exId, sets: vInt(i.sets, 1, 100) || 1, reps: vInt(i.reps, 1, 10000) || 1 } : null).filter(Boolean);
+    return { id, name: vStr(x.name, 120).trim() || 'Без названия', created: vNum(x.created, 0, 9e15) || 0, items, _u: vNum(x._u, 0, 9e15) || 0 };
+  },
+  meta(x) {
+    if (!isObj(x) || x.key !== 'plan') return null;
+    const days = vArr(x.days, 7).map(vId); while (days.length < 7) days.push(null);
+    return { key: 'plan', days, _u: vNum(x._u, 0, 9e15) || 0 };
+  },
+};
+const cleanAll = (kind, list) => vArr(list, 100000).map(CLEAN[kind]).filter(Boolean);
+
 async function reloadState() {
-  S.exercises = await getAll('exercises');
-  S.workouts = await getAll('workouts');
-  S.templates = await getAll('templates');
-  S.plan = (await getOne('meta', 'plan')) || { key: 'plan', days: Array(7).fill(null) };
-  if (!Array.isArray(S.plan.days) || S.plan.days.length !== 7) S.plan.days = Array(7).fill(null);
+  S.exercises = cleanAll('exercises', await getAll('exercises'));
+  S.workouts = cleanAll('workouts', await getAll('workouts'));
+  S.templates = cleanAll('templates', await getAll('templates'));
+  S.plan = CLEAN.meta(await getOne('meta', 'plan')) || { key: 'plan', days: Array(7).fill(null) };
   sortEx();
   S.templates.sort((a, b) => (a.created || 0) - (b.created || 0) || a.name.localeCompare(b.name, 'ru'));
 }
@@ -319,16 +369,16 @@ function download(name, text, type) {
 }
 async function importJSON(file) {
   let d;
-  try { d = JSON.parse(await file.text()); if (!Array.isArray(d.exercises) || !Array.isArray(d.workouts)) throw 0; }
+  try { if (file.size > 20 * 1024 * 1024) throw 0; d = JSON.parse(await file.text()); if (!isObj(d) || !Array.isArray(d.exercises) || !Array.isArray(d.workouts)) throw 0; }
   catch { alert('Файл не похож на резервную копию трекера (нужен JSON из «Экспорт JSON»).'); return; }
   if (!confirm(CLOUD.user ? 'Импорт заменит все данные аккаунта на всех устройствах. Продолжить?' : 'Импорт заменит все текущие данные. Продолжить?')) return;
-  const incoming = { exercises: d.exercises, workouts: d.workouts, templates: d.templates || [] };
+  const incoming = { exercises: cleanAll('exercises', d.exercises), workouts: cleanAll('workouts', d.workouts), templates: cleanAll('templates', d.templates) };
   for (const s of Object.keys(incoming)) {
     const keep = new Set(incoming[s].map(x => x.id));
     for (const old of await getAll(s)) if (!keep.has(old.id)) await dataDel(s, old.id); // удаление уходит и в облако
     for (const x of incoming[s]) await dataPut(s, x);
   }
-  if (d.plan) await dataPut('meta', { key: 'plan', days: d.plan.days });
+  const plan = CLEAN.meta({ ...(isObj(d.plan) ? d.plan : {}), key: 'plan' }); if (plan) await dataPut('meta', plan);
   await put('meta', { key: 'seedV', v: d.v >= 2 ? 2 : 1 }); // старый формат → догоним миграцией
   await load(); render(true);
 }
@@ -649,17 +699,16 @@ async function pullChanges() {
   let changed = 0, maxTs = lp ? lp.ts : null;
   for (const r of rows) {
     if (!maxTs || r.server_ts > maxTs) maxTs = r.server_ts;
-    if (!DATA_STORES.includes(r.kind) || !syncable(r.kind, r.id)) continue;
+    if (!DATA_STORES.includes(r.kind) || !(r.kind === 'meta' ? r.id === 'plan' : vId(r.id))) continue;
     const key = r.kind + '|' + r.id;
     const ob = await getOne('outbox', key);
     if (ob && ob._u >= r.updated_at) continue; // локальная правка новее — уйдёт при следующей отправке
     const local = await getOne(r.kind, r.id);
-    if (r.deleted || !r.data) { if (local) { await del(r.kind, r.id); changed++; } }
-    else if (!local || (local._u || 0) < r.updated_at) {
-      const data = { ...r.data, _u: r.updated_at };
-      if (r.kind === 'meta') data.key = r.id; else data.id = r.id;
-      await put(r.kind, data); changed++;
-    }
+    const updatedAt = vNum(r.updated_at, 0, 9e15) || 0;
+    const data = r.deleted || !isObj(r.data) ? null
+      : CLEAN[r.kind]({ ...r.data, [r.kind === 'meta' ? 'key' : 'id']: r.id, _u: updatedAt });
+    if (!data) { if (local) { await del(r.kind, r.id); changed++; } } // удалено или не прошло проверку
+    else if (!local || (local._u || 0) < updatedAt) { await put(r.kind, data); changed++; }
     if (ob) await del('outbox', key);
   }
   if (maxTs) await put('meta', { key: 'lastPull', ts: maxTs });
@@ -717,7 +766,7 @@ function humanError(e) {
   if (/invalid_credentials|Invalid login credentials/i.test(m)) return 'Неверный email или пароль';
   if (/user_already_exists|already registered/i.test(m)) return 'Этот email уже зарегистрирован. Войди или сбрось пароль';
   if (/email_not_confirmed|not confirmed/i.test(m)) return 'Email не подтверждён — открой ссылку из письма';
-  if (/weak_password|Password should|at least 6/i.test(m)) return 'Пароль слишком простой: минимум 6 символов';
+  if (/weak_password|Password should|at least \d/i.test(m)) return 'Пароль слишком простой: минимум 8 символов, лучше с цифрами и буквами';
   if (/same_password|different from the old/i.test(m)) return 'Новый пароль должен отличаться от старого';
   if (/rate limit|over_.*_rate_limit|too many/i.test(m)) return 'Слишком много попыток. Подожди минуту и попробуй снова';
   if (/email_address_invalid|invalid.*email|validate email/i.test(m)) return 'Проверь адрес email';
@@ -733,7 +782,8 @@ async function submitAuth(form) {
   if (email != null) S.authEmail = email; // не теряем введённый email при перерисовке
   const msg = (type, text) => { S.authMsg = { type, text }; S.authBusy = false; render(); };
   if (mode !== 'newpass' && !/^\S+@\S+\.\S+$/.test(email || '')) return msg('error', 'Проверь адрес email');
-  if (mode !== 'reset' && password.length < 6) return msg('error', 'Пароль — минимум 6 символов');
+  if ((mode === 'signup' || mode === 'newpass') && password.length < 8) return msg('error', 'Пароль — минимум 8 символов');
+  if (mode === 'signin' && !password) return msg('error', 'Введи пароль');
   S.authBusy = true; S.authMsg = null; S.authEmail = email || S.authEmail; render();
   try {
     if (mode === 'signin') {
@@ -787,7 +837,7 @@ async function checkGuestData() {
 async function mergeGuest() {
   const g = await openDB(GUEST_DB);
   try {
-    const [gx, gw, gt] = [await getAll('exercises', g), await getAll('workouts', g), await getAll('templates', g)];
+    const [gx, gw, gt] = [cleanAll('exercises', await getAll('exercises', g)), cleanAll('workouts', await getAll('workouts', g)), cleanAll('templates', await getAll('templates', g))];
     const map = new Map();
     for (const e of gx) {
       const same = S.exercises.find(x => x.name.toLowerCase() === e.name.toLowerCase());
@@ -829,8 +879,8 @@ function authForm() {
       : `<h2>${titles[m]}</h2>`}
     <div class="stack" style="margin-top:14px">
       ${m !== 'newpass' ? `<label class="field"><span>Email</span><input name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" value="${esc(S.authEmail || '')}" required></label>` : ''}
-      ${m !== 'reset' ? `<label class="field"><span>${m === 'newpass' ? 'Новый пароль' : 'Пароль'}</span><input name="password" type="password" autocomplete="${m === 'signin' ? 'current-password' : 'new-password'}" minlength="6" required></label>` : ''}
-      ${m === 'signup' || m === 'newpass' ? '<p class="mute small">Минимум 6 символов.</p>' : ''}
+      ${m !== 'reset' ? `<label class="field"><span>${m === 'newpass' ? 'Новый пароль' : 'Пароль'}</span><input name="password" type="password" autocomplete="${m === 'signin' ? 'current-password' : 'new-password'}" minlength="${m === 'signin' ? 1 : 8}" required></label>` : ''}
+      ${m === 'signup' || m === 'newpass' ? '<p class="mute small">Минимум 8 символов.</p>' : ''}
       ${S.authMsg ? `<p class="msg ${S.authMsg.type}" role="${S.authMsg.type === 'error' ? 'alert' : 'status'}">${esc(S.authMsg.text)}</p>` : ''}
       <button class="btn primary big block" type="submit" ${busy}>${S.authBusy ? 'Подожди…' : submit[m]}</button>
       ${m === 'signin' ? '<button type="button" class="btn ghost sm" data-a="authMode" data-id="reset">Забыли пароль?</button>' : ''}
@@ -961,6 +1011,9 @@ window.addEventListener('online', () => sync());
 window.addEventListener('offline', refreshSyncUI);
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') sync(); });
 setInterval(() => { if (document.visibilityState === 'visible') sync(); }, 60_000);
+
+// Защита от встраивания во фрейм (clickjacking): GitHub Pages не даёт поставить заголовок frame-ancestors
+if (window.top !== window.self) { try { window.top.location = window.location.href; } catch { document.documentElement.innerHTML = ''; } }
 
 (async () => {
   try {
