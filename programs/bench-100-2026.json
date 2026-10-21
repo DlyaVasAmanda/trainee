@@ -1,0 +1,2219 @@
+{
+ "key": "program",
+ "id": "bench-100-2026",
+ "title": "Жим 100 кг к Новому году",
+ "goal": {
+  "ex": "Жим лёжа",
+  "kg": 100,
+  "date": "2026-12-27"
+ },
+ "base1RM": 92,
+ "start": "2026-10-24",
+ "plasma": [
+  "2026-10-26",
+  "2026-11-09",
+  "2026-11-23",
+  "2026-12-07",
+  "2026-12-21"
+ ],
+ "blocks": [
+  {
+   "name": "Калибровка",
+   "from": "2026-10-24",
+   "to": "2026-10-25"
+  },
+  {
+   "name": "Блок 1: объём",
+   "from": "2026-10-26",
+   "to": "2026-11-15"
+  },
+  {
+   "name": "Блок 2: интенсивность",
+   "from": "2026-11-16",
+   "to": "2026-12-06"
+  },
+  {
+   "name": "Блок 3: пик и тест",
+   "from": "2026-12-07",
+   "to": "2026-12-27"
+  }
+ ],
+ "coachNote": {
+  "date": "2026-10-21",
+  "text": "Старт в субботу 24.10 с калибровки: 80 × 3 с запасом 2 повтора. Отметь RPE верхнего подхода — по нему я поправлю веса на все 9 недель."
+ },
+ "rules": [
+  "RPE 10 — больше ни одного повтора, RPE 8 — оставалось ещё два.",
+  "Верхний подход в субботу легче плана на 1+ RPE — следующая неделя +2,5 кг; тяжелее на 2 или срыв — −5 кг и сообщи тренеру.",
+  "День сдачи плазмы — без силовой. Вторник после сдачи — только умеренно, RPE ≤ 7.",
+  "Жим только со страховкой. До отказа в жиме не работаем."
+ ],
+ "sessions": [
+  {
+   "id": "2026-10-24",
+   "date": "2026-10-24",
+   "type": "C",
+   "title": "Калибровка",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 3,
+       "kg": 80,
+       "note": "RPE 8, калибровка"
+      },
+      {
+       "n": 3,
+       "reps": 6,
+       "kg": 67.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "note": "Калибровка: пришли тренеру, как шёл 80 × 3",
+   "top": {
+    "kg": 80,
+    "reps": 3
+   }
+  },
+  {
+   "id": "2026-10-27",
+   "date": "2026-10-27",
+   "type": "B′",
+   "title": "Умеренный жим после плазмы",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6,
+       "kg": 65,
+       "note": "RPE ≤ 7"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-10-31",
+   "date": "2026-10-31",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 3,
+       "kg": 77.5,
+       "note": "RPE 7"
+      },
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 72.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 77.5,
+    "reps": 3
+   }
+  },
+  {
+   "id": "2026-11-01",
+   "date": "2026-11-01",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 115
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-02",
+   "date": "2026-11-02",
+   "type": "A",
+   "title": "Жим с паузой + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 5,
+       "reps": 5,
+       "kg": 67.5,
+       "note": "пауза 1 с"
+      }
+     ]
+    },
+    {
+     "ex": "Подтягивания",
+     "group": "back",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8,
+       "note": "6–8"
+      }
+     ]
+    },
+    {
+     "ex": "Тяга гантели одной рукой",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей на наклонной",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Разгибания на блоке",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Тяга каната к лицу",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-03",
+   "date": "2026-11-03",
+   "type": "B",
+   "title": "Узкий хват + плечи",
+   "items": [
+    {
+     "ex": "Жим узким хватом",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6,
+       "kg": 62.5
+      }
+     ]
+    },
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 5,
+       "kg": 95,
+       "note": "техника"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Молотки",
+     "group": "biceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Планка",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 40,
+       "note": "секунды"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-07",
+   "date": "2026-11-07",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 3,
+       "kg": 80,
+       "note": "RPE 7–8"
+      },
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 72.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 80,
+    "reps": 3
+   }
+  },
+  {
+   "id": "2026-11-08",
+   "date": "2026-11-08",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 117.5
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-10",
+   "date": "2026-11-10",
+   "type": "B′",
+   "title": "Умеренный жим после плазмы",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 67.5,
+       "note": "RPE ≤ 7"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-14",
+   "date": "2026-11-14",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 3,
+       "kg": 82.5,
+       "note": "RPE 8"
+      },
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 75
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "note": "Контрольная точка: если 82,5 × 3 на RPE ≤ 7, блок 2 +2,5 кг",
+   "top": {
+    "kg": 82.5,
+    "reps": 3
+   }
+  },
+  {
+   "id": "2026-11-15",
+   "date": "2026-11-15",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 4,
+       "kg": 122.5
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-16",
+   "date": "2026-11-16",
+   "type": "A",
+   "title": "Жим с паузой + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 4,
+       "kg": 72.5,
+       "note": "пауза 1 с"
+      }
+     ]
+    },
+    {
+     "ex": "Подтягивания",
+     "group": "back",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8,
+       "note": "6–8"
+      }
+     ]
+    },
+    {
+     "ex": "Тяга гантели одной рукой",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей на наклонной",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Разгибания на блоке",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Тяга каната к лицу",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-17",
+   "date": "2026-11-17",
+   "type": "B",
+   "title": "Узкий хват + плечи",
+   "items": [
+    {
+     "ex": "Жим узким хватом",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 5,
+       "kg": 67.5
+      }
+     ]
+    },
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 5,
+       "kg": 95,
+       "note": "техника"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Молотки",
+     "group": "biceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Планка",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 40,
+       "note": "секунды"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-21",
+   "date": "2026-11-21",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 2,
+       "kg": 85,
+       "note": "RPE 8"
+      },
+      {
+       "n": 3,
+       "reps": 4,
+       "kg": 77.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 85,
+    "reps": 2
+   }
+  },
+  {
+   "id": "2026-11-22",
+   "date": "2026-11-22",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 3,
+       "kg": 127.5
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-24",
+   "date": "2026-11-24",
+   "type": "B′",
+   "title": "Умеренный жим после плазмы",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 4,
+       "kg": 72.5,
+       "note": "RPE ≤ 7"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-28",
+   "date": "2026-11-28",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 87.5,
+       "note": "RPE 7–8"
+      },
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 80
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 87.5,
+    "reps": 1
+   }
+  },
+  {
+   "id": "2026-11-29",
+   "date": "2026-11-29",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 130
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-11-30",
+   "date": "2026-11-30",
+   "type": "A",
+   "title": "Жим с паузой + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 3,
+       "kg": 75,
+       "note": "пауза 1 с"
+      }
+     ]
+    },
+    {
+     "ex": "Подтягивания",
+     "group": "back",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8,
+       "note": "6–8"
+      }
+     ]
+    },
+    {
+     "ex": "Тяга гантели одной рукой",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей на наклонной",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Разгибания на блоке",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Тяга каната к лицу",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-01",
+   "date": "2026-12-01",
+   "type": "B",
+   "title": "Узкий хват + плечи",
+   "items": [
+    {
+     "ex": "Жим узким хватом",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 4,
+       "kg": 70
+      }
+     ]
+    },
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 5,
+       "kg": 100,
+       "note": "техника"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Молотки",
+     "group": "biceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Планка",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 40,
+       "note": "секунды"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-05",
+   "date": "2026-12-05",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 90,
+       "note": "RPE 8"
+      },
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 80
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "note": "Контрольная точка: 90 × 1 на RPE ≤ 8 — цель 100 остаётся",
+   "top": {
+    "kg": 90,
+    "reps": 1
+   }
+  },
+  {
+   "id": "2026-12-06",
+   "date": "2026-12-06",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 132.5
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 4,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-08",
+   "date": "2026-12-08",
+   "type": "B′",
+   "title": "Умеренный жим после плазмы",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 75,
+       "note": "пауза, RPE ≤ 7"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-12",
+   "date": "2026-12-12",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 92.5,
+       "note": "RPE 8–8,5"
+      },
+      {
+       "n": 2,
+       "reps": 2,
+       "kg": 82.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 92.5,
+    "reps": 1
+   }
+  },
+  {
+   "id": "2026-12-13",
+   "date": "2026-12-13",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 2,
+       "kg": 135
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-14",
+   "date": "2026-12-14",
+   "type": "A",
+   "title": "Жим с паузой + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 2,
+       "kg": 80,
+       "note": "пауза 1 с"
+      }
+     ]
+    },
+    {
+     "ex": "Подтягивания",
+     "group": "back",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8,
+       "note": "6–8"
+      }
+     ]
+    },
+    {
+     "ex": "Тяга гантели одной рукой",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей на наклонной",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Разгибания на блоке",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Тяга каната к лицу",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-15",
+   "date": "2026-12-15",
+   "type": "B",
+   "title": "Узкий хват + плечи",
+   "items": [
+    {
+     "ex": "Жим узким хватом",
+     "group": "triceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 70
+      }
+     ]
+    },
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 100,
+       "note": "техника"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Молотки",
+     "group": "biceps",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 12
+      }
+     ]
+    },
+    {
+     "ex": "Планка",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 40,
+       "note": "секунды"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-19",
+   "date": "2026-12-19",
+   "type": "C",
+   "title": "Тяжёлый жим + спина",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 95,
+       "note": "RPE ≤ 9; если ≤ 8 — ещё 97,5 × 1"
+      },
+      {
+       "n": 2,
+       "reps": 2,
+       "kg": 82.5
+      }
+     ]
+    },
+    {
+     "ex": "Тяга верхнего блока",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Тяга штанги в наклоне",
+     "group": "back",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Отжимания на брусьях",
+     "group": "chest",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в наклоне",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    }
+   ],
+   "note": "Последний тяжёлый подход перед тестом",
+   "top": {
+    "kg": 95,
+    "reps": 1
+   }
+  },
+  {
+   "id": "2026-12-20",
+   "date": "2026-12-20",
+   "type": "D",
+   "title": "Присед + жим стоя",
+   "items": [
+    {
+     "ex": "Приседания со штангой",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 115,
+       "note": "легко"
+      }
+     ]
+    },
+    {
+     "ex": "Жим стоя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 6
+      }
+     ]
+    },
+    {
+     "ex": "Румынская тяга",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 8
+      }
+     ]
+    },
+    {
+     "ex": "Выпады с гантелями",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10
+      }
+     ]
+    },
+    {
+     "ex": "Подъём на носки",
+     "group": "legs",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    },
+    {
+     "ex": "Подъём ног в висе",
+     "group": "abs",
+     "type": "bodyweight",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-22",
+   "date": "2026-12-22",
+   "type": "B′",
+   "title": "Умеренный жим после плазмы",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 3,
+       "reps": 3,
+       "kg": 72.5,
+       "note": "быстро и чисто"
+      }
+     ]
+    },
+    {
+     "ex": "Жим гантелей сидя",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 10,
+       "note": "8–10"
+      }
+     ]
+    },
+    {
+     "ex": "Махи в стороны",
+     "group": "shoulders",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 2,
+       "reps": 15
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "2026-12-27",
+   "date": "2026-12-27",
+   "type": "T",
+   "title": "Тест 1ПМ",
+   "note": "Разминка: гриф × 10, 50 × 5, 65 × 3, 75 × 2, 85 × 1. Отдых между попытками 4–5 минут.",
+   "items": [
+    {
+     "ex": "Жим лёжа",
+     "group": "chest",
+     "type": "strength",
+     "scheme": [
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 92.5,
+       "note": "1-я попытка"
+      },
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 97.5,
+       "note": "2-я попытка"
+      },
+      {
+       "n": 1,
+       "reps": 1,
+       "kg": 100,
+       "note": "3-я: только если 97,5 шло уверенно, иначе 95"
+      }
+     ]
+    }
+   ],
+   "top": {
+    "kg": 100,
+    "reps": 1
+   }
+  }
+ ]
+}

@@ -1,8 +1,8 @@
 // Оболочка: stale-while-revalidate — мгновенно из кэша, обновление подтягивается в фоне
 // и применяется при следующем открытии. Шрифты Google кэшируются для офлайна.
-const CACHE = 'trainee-v5';
+const CACHE = 'trainee-v6';
 const FONTS = 'trainee-fonts-v1';
-const SHELL = ['./', './index.html', './config.js', './vendor/supabase-2.117.2.js', './cloud.js', './app.js', './manifest.webmanifest', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'];
+const SHELL = ['./', './index.html', './config.js', './vendor/supabase-2.117.2.js', './cloud.js', './app.js', './programs/bench-100-2026.json', './manifest.webmanifest', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));

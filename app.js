@@ -10,7 +10,7 @@
 const GUEST_DB = 'workout-tracker';
 const DB_VERSION = 3; // v1: exercises, workouts; v2: + templates, meta; v3: + outbox
 const DATA_STORES = ['exercises', 'workouts', 'templates', 'meta'];
-const SYNCED_META = new Set(['plan']); // остальные ключи meta — локальные (seedV, lastPull, …)
+const SYNCED_META = new Set(['plan', 'program']); // остальные ключи meta — локальные (seedV, lastPull, …)
 let db;
 
 const dbNameFor = user => user ? 'trainee-' + user.id : GUEST_DB;
@@ -123,10 +123,43 @@ const isObj = v => v !== null && typeof v === 'object' && !Array.isArray(v);
 function cleanSet(x) {
   if (!isObj(x)) return null;
   const s = {};
-  for (const [k, [min, max, int]] of Object.entries({ w: [0, 2000, false], r: [0, 10000, true], km: [0, 1000, false], min: [0, 10000, false] })) {
+  for (const [k, [min, max, int]] of Object.entries({ w: [0, 2000, false], r: [0, 10000, true], km: [0, 1000, false], min: [0, 10000, false], rpe: [5, 10, false] })) {
     const n = int ? vInt(x[k], min, max) : vNum(x[k], min, max); if (n != null) s[k] = n;
   }
   return Object.keys(s).length ? s : null;
+}
+const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
+const vDate = v => typeof v === 'string' && DATE_RE.test(v) ? v : null;
+// Схема подходов из программы: [{n, reps, kg?, note?}]
+const cleanScheme = x => vArr(x, 10).map(g => {
+  if (!isObj(g) || vInt(g.n, 1, 20) == null || vInt(g.reps, 1, 1000) == null) return null;
+  const o = { n: vInt(g.n, 1, 20), reps: vInt(g.reps, 1, 1000) };
+  const kg = vNum(g.kg, 0, 500); if (kg != null) o.kg = kg;
+  const note = vStr(g.note, 120); if (note) o.note = note;
+  return o;
+}).filter(Boolean);
+function cleanProgram(x) {
+  if (!isObj(x) || !isObj(x.goal)) return null;
+  const goal = { ex: vStr(x.goal.ex, 120), kg: vNum(x.goal.kg, 1, 500), date: vDate(x.goal.date) };
+  if (!goal.ex || goal.kg == null || !goal.date) return null;
+  const sessions = vArr(x.sessions, 200).map(se => {
+    if (!isObj(se) || !vDate(se.date)) return null;
+    const items = vArr(se.items, 15).map(it => isObj(it) && vStr(it.ex, 120).trim() ? {
+      ex: vStr(it.ex, 120).trim(), group: GROUPS[it.group] ? it.group : null, type: TYPES[it.type] ? it.type : null, scheme: cleanScheme(it.scheme),
+    } : null).filter(Boolean);
+    const o = { id: se.date, date: se.date, type: vStr(se.type, 4), title: vStr(se.title, 120), note: vStr(se.note, 300), items };
+    if (isObj(se.top) && vNum(se.top.kg, 0, 500) != null) o.top = { kg: vNum(se.top.kg, 0, 500), reps: vInt(se.top.reps, 1, 100) || 1 };
+    return o;
+  }).filter(Boolean).sort((a, b) => a.date < b.date ? -1 : 1);
+  if (!sessions.length) return null;
+  return {
+    key: 'program', id: vStr(x.id, 80), title: vStr(x.title, 120) || 'Программа', goal, base1RM: vNum(x.base1RM, 1, 500) || goal.kg,
+    plasma: vArr(x.plasma, 60).map(vDate).filter(Boolean),
+    blocks: vArr(x.blocks, 12).map(b => isObj(b) && vDate(b.from) && vDate(b.to) ? { name: vStr(b.name, 60), from: b.from, to: b.to } : null).filter(Boolean),
+    coachNote: isObj(x.coachNote) && vStr(x.coachNote.text, 1000) ? { date: vDate(x.coachNote.date), text: vStr(x.coachNote.text, 1000) } : null,
+    rules: vArr(x.rules, 12).map(r => vStr(r, 300)).filter(Boolean),
+    sessions, _u: vNum(x._u, 0, 9e15) || 0,
+  };
 }
 const cleanTarget = x => isObj(x) && vInt(x.sets, 1, 100) != null && vInt(x.reps, 1, 10000) != null ? { sets: vInt(x.sets, 1, 100), reps: vInt(x.reps, 1, 10000) } : undefined;
 const CLEAN = {
@@ -142,10 +175,11 @@ const CLEAN = {
       const exId = isObj(e) && vId(e.exId); if (!exId) return null;
       const o = { exId, sets: vArr(e.sets, 200).map(cleanSet).filter(Boolean) };
       const t = cleanTarget(e.target); if (t) o.target = t;
+      const sc = cleanScheme(e.scheme); if (sc.length) o.scheme = sc;
       return o;
     }).filter(Boolean);
     const end = vNum(x.end, 0, 9e15);
-    return { id, start, ...(end != null ? { end } : {}), finished: x.finished === true, title: vStr(x.title, 120), templateId: vId(x.templateId), entries, _u: vNum(x._u, 0, 9e15) || 0 };
+    return { id, start, ...(end != null ? { end } : {}), finished: x.finished === true, title: vStr(x.title, 120), templateId: vId(x.templateId), programDate: vDate(x.programDate), entries, _u: vNum(x._u, 0, 9e15) || 0 };
   },
   templates(x) {
     const id = isObj(x) && vId(x.id); if (!id) return null;
@@ -153,6 +187,7 @@ const CLEAN = {
     return { id, name: vStr(x.name, 120).trim() || 'Без названия', created: vNum(x.created, 0, 9e15) || 0, items, _u: vNum(x._u, 0, 9e15) || 0 };
   },
   meta(x) {
+    if (isObj(x) && x.key === 'program') return cleanProgram(x);
     if (!isObj(x) || x.key !== 'plan') return null;
     const days = vArr(x.days, 7).map(vId); while (days.length < 7) days.push(null);
     return { key: 'plan', days, _u: vNum(x._u, 0, 9e15) || 0 };
@@ -165,6 +200,7 @@ async function reloadState() {
   S.workouts = cleanAll('workouts', await getAll('workouts'));
   S.templates = cleanAll('templates', await getAll('templates'));
   S.plan = CLEAN.meta(await getOne('meta', 'plan')) || { key: 'plan', days: Array(7).fill(null) };
+  S.program = CLEAN.meta(await getOne('meta', 'program'));
   sortEx();
   S.templates.sort((a, b) => (a.created || 0) - (b.created || 0) || a.name.localeCompare(b.name, 'ru'));
 }
@@ -219,10 +255,15 @@ const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;'
 const num = v => { const n = parseFloat(String(v ?? '').replace(',', '.')); return Number.isFinite(n) ? n : null; };
 const fmtN = n => (Math.round(n * 10) / 10).toString().replace('.', ',');
 const plural = (n, one, few, many) => { const a = Math.abs(n) % 100, b = a % 10; return a > 10 && a < 20 ? many : b === 1 ? one : b >= 2 && b <= 4 ? few : many; };
-const fmtSet = (type, s) =>
+const fmtSet = (type, s) => (
   type === 'strength' ? `${fmtN(s.w)} кг × ${s.r}` :
   type === 'bodyweight' ? `${s.r} повт.` + (s.w ? ` +${fmtN(s.w)} кг` : '') :
-  `${fmtN(s.km)} км, ${fmtN(s.min)} мин` + (s.km && s.min ? `, ${fmtN(s.min / s.km)} мин/км` : '');
+  `${fmtN(s.km)} км, ${fmtN(s.min)} мин` + (s.km && s.min ? `, ${fmtN(s.min / s.km)} мин/км` : '')) + (s.rpe ? ` @${fmtN(s.rpe)}` : '');
+// «80×3, 3×6×67,5» — компактная запись схемы подходов
+const schemeText = sc => sc.map(g => g.kg != null ? (g.n > 1 ? `${g.n}×${g.reps}×${fmtN(g.kg)}` : `${fmtN(g.kg)}×${g.reps}`) : `${g.n}×${g.reps}`).join(', ');
+const schemeTotal = sc => sc.reduce((a, g) => a + g.n, 0);
+// Какой группе схемы принадлежит k-й подход (с нуля)
+const schemeGroupAt = (sc, k) => { let acc = 0; for (const g of sc) { acc += g.n; if (k < acc) return g; } return null; };
 const fmtTarget = (type, it) => type === 'cardio' ? `${it.reps} мин` : `${it.sets}×${it.reps}`;
 const lastFor = exId => {
   for (const w of finished()) { const e = w.entries.find(e => e.exId === exId); if (e && e.sets.length) return e; }
@@ -257,6 +298,8 @@ const ICON = {
   progress: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3.5 17l5.5-5.5 4 4 7.5-8"/><path d="M15.5 7.5h5v5"/></svg>',
   ex: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6.5 7v10M3.5 9.5v5M17.5 7v10M20.5 9.5v5M6.5 12h11"/></svg>',
   x: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>',
+  goal: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4.5h11.5l-2.2 3.8 2.2 3.8H5"/></svg>',
+  drop: '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true"><path d="M12 3c3.5 4.6 6 8 6 11a6 6 0 0 1-12 0c0-3 2.5-6.4 6-11z" fill="var(--g-chest)" fill-opacity=".75"/></svg>',
   user: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20c1.2-3.8 4-5.6 7.5-5.6s6.3 1.8 7.5 5.6"/></svg>',
 };
 
@@ -296,7 +339,8 @@ async function addSet(exId, card) {
   if (ex.type === 'strength') { const wt = v('w'), r = v('r'); if (wt == null || !r) return shake(card); s = { w: wt, r }; }
   else if (ex.type === 'bodyweight') { const r = v('r'); if (!r) return shake(card); s = { r, w: v('w') || 0 }; }
   else { const km = v('km'), min = v('min'); if (km == null || !min) return shake(card); s = { km, min }; }
-  e.sets.push(s); await saveW(w); render();
+  const rpe = vNum(v('rpe'), 5, 10); if (rpe != null && ex.type !== 'cardio') s.rpe = rpe;
+  e.sets.push(cleanSet(s)); await saveW(w); render();
 }
 const shake = el => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); };
 async function delSet(exId, i) { const w = active(); w.entries.find(e => e.exId === exId).sets.splice(i, 1); await saveW(w); render(); }
@@ -383,6 +427,64 @@ async function importJSON(file) {
   await load(); render(true);
 }
 
+/* ---------- Программа тренера ---------- */
+// Дата как ключ YYYY-MM-DD в местном времени (а не в UTC)
+const dk = t => { const d = new Date(t); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };
+const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+const shortKey = k => fromKey(k).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+const progSession = key => S.program ? S.program.sessions.find(x => x.date === key) || null : null;
+const isPlasma = key => !!S.program && S.program.plasma.includes(key);
+const exByName = n => S.exercises.find(e => e.name.toLowerCase() === n.toLowerCase());
+const sessionWorkout = se => finished().find(w => w.programDate === se.id) || finished().find(w => !w.programDate && dk(w.start) === se.date) || null;
+function sessionWeights(se) { // доля группы мышц = число подходов
+  const m = new Map();
+  for (const it of se.items) { const g = exByName(it.ex)?.group || it.group || 'other'; m.set(g, (m.get(g) || 0) + Math.max(1, schemeTotal(it.scheme))); }
+  return [...m.entries()];
+}
+const sessionLabel = se => se.type === 'T' ? se.title : `${se.type}. ${se.title}`;
+// Лучший подход упражнения цели в тренировке (по весу)
+function topSet(w, exName) {
+  const ex = exByName(exName); if (!w || !ex) return null;
+  let best = null;
+  for (const e of w.entries) if (e.exId === ex.id) for (const x of e.sets) if (x.w && (!best || x.w > best.w || (x.w === best.w && x.r > best.r))) best = x;
+  return best;
+}
+const e1rm = x => x.r === 1 ? x.w : x.w * (1 + x.r / 30);
+function currentMax(p) { // расчётный максимум за 5 недель по подходам до 10 повторов
+  const ex = exByName(p.goal.ex); if (!ex) return null;
+  const since = Date.now() - 35 * 864e5; let best = null;
+  for (const w of finished()) if (w.start >= since) for (const e of w.entries) if (e.exId === ex.id)
+    for (const x of e.sets) if (x.w && x.r && x.r <= 10) { const v = e1rm(x); if (!best || v > best.v) best = { v, x, date: w.start }; }
+  return best;
+}
+async function ensureExercise(it) {
+  let ex = exByName(it.ex);
+  if (!ex) {
+    ex = { id: uid(), name: it.ex, type: it.type || 'strength', group: it.group || SEED_GROUP[it.ex] || 'other' };
+    await dataPut('exercises', ex); S.exercises.push(ex); sortEx();
+  }
+  return ex;
+}
+async function startProgramSession(key) {
+  if (active()) return;
+  const se = progSession(key); if (!se) return;
+  const entries = [];
+  for (const it of se.items) { const ex = await ensureExercise(it); if (!entries.some(e => e.exId === ex.id)) entries.push({ exId: ex.id, sets: [], scheme: it.scheme }); }
+  const w = { id: uid(), start: Date.now(), finished: false, templateId: null, programDate: se.id, title: se.title, entries };
+  S.workouts.push(w); await saveW(w); S.tab = 'today'; S.adding = false; render(true); window.scrollTo(0, 0);
+}
+async function activateProgram() {
+  try {
+    const res = await fetch('programs/bench-100-2026.json', { cache: 'no-cache' });
+    const p = cleanProgram(await res.json()); if (!p) throw new Error('bad program');
+    await dataPut('meta', p); S.program = p; render(true);
+  } catch { alert('Не удалось загрузить программу. Проверь интернет и попробуй ещё раз.'); }
+}
+async function deactivateProgram() {
+  if (!confirm('Отключить программу? История тренировок сохранится, а «Сегодня» снова будет брать план недели.')) return;
+  await dataDel('meta', 'program'); S.program = null; render();
+}
+
 /* =========================================================
    Экраны
    ========================================================= */
@@ -399,12 +501,14 @@ function weekStrip(sel) {
   const done = finished();
   return `<div class="week" role="tablist" aria-label="Неделя">${DOW.map((d, i) => {
     const date = dayDate(i);
-    const t = tplById(S.plan.days[i]);
+    const ps = S.program ? progSession(dk(date)) : null, pl = S.program && isPlasma(dk(date));
+    const t = S.program ? null : tplById(S.plan.days[i]);
     const dw = done.filter(w => sameDay(w.start, date));
-    const weights = t ? tplWeights(t) : dw.length ? wWeights(dw[0]) : [];
+    const weights = ps ? sessionWeights(ps) : t ? tplWeights(t) : dw.length ? wWeights(dw[0]) : [];
+    const name = ps ? sessionLabel(ps) : pl ? 'сдача плазмы' : t ? t.name : 'отдых';
     const cls = ['day', i === sel && 'sel', i === today && 'today', i < today && 'past', dw.length && 'done'].filter(Boolean).join(' ');
-    return `<button class="${cls}" data-day="${i}" role="tab" aria-selected="${i === sel}" aria-label="${DOW_FULL[i]}${t ? ', ' + esc(t.name) : ', отдых'}${dw.length ? ', выполнено' : ''}">
-      <span class="d">${d}</span>${plate(weights, '', dw.length ? '✓' : '')}<span class="n">${date.getDate()}</span></button>`;
+    return `<button class="${cls}" data-day="${i}" role="tab" aria-selected="${i === sel}" aria-label="${DOW_FULL[i]}, ${esc(name)}${dw.length ? ', выполнено' : ''}">
+      <span class="d">${d}</span>${plate(weights, '', dw.length ? '✓' : pl ? ICON.drop : '')}<span class="n">${date.getDate()}</span></button>`;
   }).join('')}</div>`;
 }
 
@@ -420,7 +524,8 @@ function viewToday() {
   const spin = S.spin ? 'spin' : '';
 
   let body;
-  if (t) {
+  if (S.program) body = programHero(progSession(dk(date)), isPlasma(dk(date)), date, label, spin, sel === today);
+  else if (t) {
     const weights = tplWeights(t);
     body = `<div class="hero">${plate(weights, 'big ' + spin)}
         <div><div class="mute small">${label}, ${longDate(date)}</div><h2>${esc(t.name)}</h2>
@@ -446,6 +551,102 @@ function viewToday() {
     <button class="btn ghost block" style="margin-top:8px" data-a="start">Свободная тренировка</button>`;
 }
 
+function programHero(ps, pl, date, label, spin, isToday) {
+  const when = `<div class="mute small">${label}, ${longDate(date)}</div>`;
+  if (!ps && pl) return `<div class="hero">${plate([], 'big ' + spin, ICON.drop)}<div>${when}<h2>Сдача плазмы</h2>
+    <p class="mute small">Силовой сегодня нет. Больше воды и белка. Завтра тренировка умеренная, RPE не выше 7.</p></div></div>`;
+  if (!ps) return `<div class="hero">${plate([], 'big ' + spin)}<div>${when}<h2>День отдыха</h2>
+    <p class="mute small">По программе отдых. Восстановление тоже работает на результат.</p></div></div>`;
+  const weights = sessionWeights(ps);
+  return `<div class="hero">${plate(weights, 'big ' + spin)}<div>${when}<h2>${esc(ps.title)}</h2>
+      <div class="chips"><span class="chip">${ps.type === 'T' ? 'Тест' : 'День ' + esc(ps.type)}</span>${weights.slice(0, 3).map(([g]) => `<span class="chip"><span class="dot" style="--c:${gc(g)}"></span>${GROUPS[g]}</span>`).join('')}</div></div></div>
+    ${ps.note ? `<p class="coach-line">${esc(ps.note)}</p>` : ''}
+    <div class="plan-rows">${ps.items.map(it => { const ex = exByName(it.ex); return `<div class="plan-row">
+      <span class="dot" style="--c:${gc(ex?.group || it.group)}"></span><span>${esc(it.ex)}</span><span class="target">${esc(schemeText(it.scheme))}</span></div>`; }).join('')}</div>
+    <div class="stack" style="margin-top:18px"><button class="btn primary big block" data-a="progStart" data-id="${ps.date}">${isToday ? 'Начать тренировку' : 'Начать сейчас'}</button></div>`;
+}
+
+/* --- Цель --- */
+function goalChart(p) {
+  const tops = p.sessions.filter(se => se.top);
+  if (tops.length < 2) return '';
+  const W = 360, H = 196, l = 10, r = 346, y0 = 22, base = 160;
+  const t0 = fromKey(tops[0].date).getTime(), t1 = fromKey(tops.at(-1).date).getTime();
+  const X = k => l + (fromKey(k).getTime() - t0) / (t1 - t0 || 1) * (r - l);
+  const facts = tops.map(se => ({ se, f: topSet(sessionWorkout(se), p.goal.ex) })).filter(o => o.f);
+  const vals = tops.map(se => se.top.kg).concat(facts.map(o => o.f.w), [p.goal.kg]);
+  const lo = Math.floor(Math.min(...vals) / 5) * 5 - 2.5, hi = Math.max(...vals) + 2.5;
+  const Y = v => base - (v - lo) / (hi - lo) * (base - y0);
+  const planPath = tops.map((se, i) => `${i ? 'L' : 'M'}${X(se.date).toFixed(1)},${Y(se.top.kg).toFixed(1)}`).join(' ');
+  const factPath = facts.map((o, i) => `${i ? 'L' : 'M'}${X(o.se.date).toFixed(1)},${Y(o.f.w).toFixed(1)}`).join(' ');
+  const lastF = facts.at(-1);
+  return `<svg class="goal-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Верхний подход по субботам: план и факт">
+    <line x1="${l}" x2="${r}" y1="${Y(p.goal.kg)}" y2="${Y(p.goal.kg)}" stroke="var(--mute)" stroke-dasharray="5 4" stroke-width="1"/>
+    <text x="${l}" y="${Y(p.goal.kg) - 5}" class="lbl">цель ${fmtN(p.goal.kg)} кг</text>
+    <path d="${planPath}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/>
+    ${tops.map(se => `<circle cx="${X(se.date)}" cy="${Y(se.top.kg)}" r="2.5" fill="var(--mute)"><title>План ${shortKey(se.date)}: ${fmtN(se.top.kg)} × ${se.top.reps}</title></circle>`).join('')}
+    ${facts.length ? `<path d="${factPath}" fill="none" stroke="var(--g-back)" stroke-width="2.5" stroke-linejoin="round"/>` : ''}
+    ${facts.map(o => `<circle cx="${X(o.se.date)}" cy="${Y(o.f.w)}" r="4.5" fill="var(--g-back)"><title>Факт ${shortKey(o.se.date)}: ${fmtN(o.f.w)} × ${o.f.r}${o.f.rpe ? ' @' + fmtN(o.f.rpe) : ''}</title></circle>`).join('')}
+    ${lastF ? `<text x="${Math.min(X(lastF.se.date), r - 40)}" y="${Y(lastF.f.w) - 9}" class="lbl strong">${fmtN(lastF.f.w)}×${lastF.f.r}</text>` : ''}
+    <text x="${l}" y="${H - 18}" class="lbl">${shortKey(tops[0].date)}</text><text x="${r}" y="${H - 18}" class="lbl" text-anchor="end">${shortKey(tops.at(-1).date)}</text>
+    <circle cx="${l + 4}" cy="${H - 4}" r="3.5" fill="var(--g-back)"/><text x="${l + 12}" y="${H - 1}" class="lbl">факт</text>
+    <line x1="${l + 52}" x2="${l + 70}" y1="${H - 4}" y2="${H - 4}" stroke="var(--mute)" stroke-dasharray="2 4" stroke-width="1.5"/><text x="${l + 76}" y="${H - 1}" class="lbl">план</text>
+  </svg>`;
+}
+function viewGoal() {
+  const p = S.program;
+  if (!p) return `<header class="head"><div><h1>Цель</h1><div class="sub">Программа тренера с весами на каждую тренировку</div></div>${avatarBtn()}</header>
+    <section class="sheet"><div class="hero">${plate([['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]], 'big spin')}<div>
+      <h2>Жим 100 кг к Новому году</h2><p class="mute small">9 недель, 3 блока, тест 27 декабря. Тренировки в Пн, Вт, Сб, Вс, сдачи плазмы по понедельникам учтены.</p></div></div>
+      <button class="btn primary big block" style="margin-top:18px" data-a="progOn">Подключить программу</button></section>`;
+  const today = dk(Date.now());
+  const daysLeft = Math.round((fromKey(p.goal.date) - startOfDay(Date.now())) / 864e5);
+  const best = currentMax(p), est = best ? best.v : p.base1RM;
+  // Шкала от ~85% цели до цели: видно и старт, и текущую оценку, даже если она пока ниже старта
+  const lo = Math.floor(Math.min(p.base1RM, est, p.goal.kg * 0.9) * 0.95 / 5) * 5, span = (p.goal.kg - lo) || 1;
+  const pct = Math.max(0.02, Math.min(1, (est - lo) / span)), basePct = Math.max(0, Math.min(1, (p.base1RM - lo) / span));
+  const next = p.sessions.find(se => se.date >= today && !sessionWorkout(se));
+  const plasmaToday = isPlasma(today);
+  const nextLabel = !next ? '' : next.date === today ? 'Сегодня' : next.date === dk(Date.now() + 864e5) ? 'Завтра' : DOW_FULL[dowOf(fromKey(next.date))];
+  const rows = [...p.sessions.map(se => ({ k: se.date, se })), ...p.plasma.map(k => ({ k, plasma: true }))].sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : a.plasma ? -1 : 1);
+  const blocks = p.blocks.length ? p.blocks : [{ name: 'Программа', from: rows[0].k, to: rows.at(-1).k }];
+  return `<header class="head"><div><h1>Цель</h1><div class="sub">${esc(p.title)}</div></div>${avatarBtn()}</header>
+    <section class="sheet goal-hero">
+      <div class="goal-top"><div><div class="goal-kg num">${fmtN(p.goal.kg)}<small> кг</small></div>
+        <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
+        <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
+      <div class="track" role="img" aria-label="Расчётный максимум ${fmtN(Math.round(est * 2) / 2)} кг из ${fmtN(p.goal.kg)}, старт ${fmtN(p.base1RM)}"><div class="fill" style="width:${(pct * 100).toFixed(1)}%"></div><div class="tick" style="left:${(basePct * 100).toFixed(1)}%"></div></div>
+      <div class="track-legend"><span>${fmtN(lo)}</span><b>сейчас ≈ ${fmtN(Math.round(est * 2) / 2)} кг</b><span>${fmtN(p.goal.kg)}</span></div>
+      <p class="mute small">Метка на шкале — старт программы, ${fmtN(p.base1RM)} кг.</p>
+      <p class="mute small" style="margin-top:6px">${best ? `Расчёт по подходу ${fmtSet('strength', best.x)} от ${shortKey(dk(best.date))} (формула Эпли).` : 'Пока это стартовая оценка. Она обновится после первых тяжёлых подходов.'}</p>
+    </section>
+    ${p.coachNote ? `<section class="coach"><div class="mute small">Тренер${p.coachNote.date ? ', ' + shortKey(p.coachNote.date) : ''}</div><p>${esc(p.coachNote.text)}</p></section>` : ''}
+    ${plasmaToday ? `<section class="notice" style="margin:12px 0 0;box-shadow:inset 4px 0 0 var(--g-chest)"><p><b>Сегодня сдача плазмы.</b> Силовой нет, пей больше воды и ешь белок.</p></section>` : ''}
+    ${next ? `<section class="sheet next"><div class="mute small">${nextLabel}, ${longDate(fromKey(next.date))}</div><h2>${esc(next.title)}</h2>
+      <div class="plan-rows" style="margin-top:8px">${next.items.slice(0, 2).map(it => `<div class="plan-row"><span class="dot" style="--c:${gc(exByName(it.ex)?.group || it.group)}"></span><span>${esc(it.ex)}</span><span class="target">${esc(schemeText(it.scheme))}</span></div>`).join('')}
+      ${next.items.length > 2 ? `<p class="mute small" style="margin-top:6px">и ещё ${next.items.length - 2} ${plural(next.items.length - 2, 'упражнение', 'упражнения', 'упражнений')}</p>` : ''}</div>
+      ${active() ? '<p class="mute small" style="margin-top:12px">Сейчас идёт тренировка, её видно на вкладке «Сегодня».</p>' : plasmaToday && next.date !== today ? '' : `<button class="btn primary big block" style="margin-top:14px" data-a="progStart" data-id="${next.date}">${next.date === today ? 'Начать тренировку' : 'Начать сейчас'}</button>`}</section>` : ''}
+    <section class="sheet" style="margin-top:12px"><h3>Верхний подход по субботам</h3>${goalChart(p)}</section>
+    <div class="section"><h2>Расписание</h2>
+    ${blocks.map(b => { const list = rows.filter(x => x.k >= b.from && x.k <= b.to); return list.length ? `<h3 class="block-h">${esc(b.name)} <span class="mute small">${shortKey(b.from)} – ${shortKey(b.to)}</span></h3>
+      <div class="list">${list.map(x => schedRow(x, today, p)).join('')}</div>` : ''; }).join('')}</div>
+    ${p.rules.length ? `<details class="sheet rules"><summary>Правила программы</summary><ul>${p.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul></details>` : ''}
+    <button class="btn ghost danger block" style="margin-top:14px" data-a="progOff">Отключить программу</button>`;
+}
+function schedRow(x, today, p) {
+  const d = fromKey(x.k), when = `<span class="sd"><b>${DOW[dowOf(d)]}</b> ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}</span>`;
+  if (x.plasma) return `<div class="item sched plasma">${when}<span class="grow mute">${ICON.drop} Сдача плазмы, без силовой</span></div>`;
+  const se = x.se, w = sessionWorkout(se), f = w ? topSet(w, p.goal.ex) : null, open = S.openSession === se.date;
+  const status = w ? `<span class="st ok">✓${f ? ' ' + fmtN(f.w) + '×' + f.r : ''}</span>` : se.date === today ? '<span class="st now">сегодня</span>' : se.date < today ? '<span class="st miss">пропущено</span>' : '';
+  const main = se.items[0];
+  return `<div class="sched-wrap ${se.date === today ? 'is-today' : ''}"><button class="item sched" data-a="progOpen" data-id="${se.date}" aria-expanded="${open}">${when}
+      <span class="grow"><span class="badge">${se.type === 'T' ? 'Тест' : esc(se.type)}</span> ${main ? esc(schemeText(main.scheme)) : esc(se.title)}</span>${status}</button>
+    ${open ? `<div class="sched-detail"><b>${esc(se.title)}</b>${se.note ? `<p class="mute small">${esc(se.note)}</p>` : ''}
+      ${se.items.map(it => `<div class="plan-row"><span class="dot" style="--c:${gc(exByName(it.ex)?.group || it.group)}"></span><span>${esc(it.ex)}</span><span class="target">${esc(schemeText(it.scheme))}</span></div>`).join('')}
+      ${w ? `<p class="mute small" style="margin-top:8px">Выполнено: ${setCount(w)} ${plural(setCount(w), 'подход', 'подхода', 'подходов')}, ${mins(w)} мин</p>`
+        : active() ? '' : `<button class="btn sm" style="margin-top:10px" data-a="progStart" data-id="${se.date}">Начать эту тренировку</button>`}</div>` : ''}</div>`;
+}
+
 /* --- Активная тренировка --- */
 function viewActive(w) {
   const taken = w.entries.map(e => e.exId);
@@ -465,22 +666,28 @@ function viewActive(w) {
 function entryCard(e) {
   const ex = exById(e.exId); if (!ex) return '';
   const prev = lastFor(e.exId);
-  const seed = e.sets.at(-1) || prev?.sets[0] || {};
+  const sc = e.scheme || null, next = sc ? schemeGroupAt(sc, e.sets.length) : null;
+  // Подстановка: вес и повторы следующей группы схемы программы, иначе последний подход
+  const seed = next ? { w: next.kg ?? e.sets.at(-1)?.w, r: next.reps } : e.sets.at(-1) || prev?.sets[0] || {};
   const val = v => v != null && v !== 0 ? `value="${v}"` : '';
+  const rpeSel = `<select name="rpe" aria-label="RPE: насколько тяжело" class="rpe"><option value="">RPE</option>${[6, 6.5, 7, 7.5, 8, 8.5, 9, 9.5, 10].map(x => `<option value="${x}">${fmtN(x)}</option>`).join('')}</select>`;
   const inputs = ex.type === 'strength'
-    ? `<input name="w" inputmode="decimal" placeholder="кг" aria-label="Вес, кг" ${val(seed.w)}><input name="r" inputmode="numeric" placeholder="повторы" aria-label="Повторы" ${val(seed.r ?? e.target?.reps)}>`
+    ? `<input name="w" inputmode="decimal" placeholder="кг" aria-label="Вес, кг" ${val(seed.w)}><input name="r" inputmode="numeric" placeholder="повторы" aria-label="Повторы" ${val(seed.r ?? e.target?.reps)}>${rpeSel}`
     : ex.type === 'bodyweight'
-    ? `<input name="r" inputmode="numeric" placeholder="повторы" aria-label="Повторы" ${val(seed.r ?? e.target?.reps)}><input name="w" inputmode="decimal" placeholder="+кг" aria-label="Доп. вес, кг" ${val(seed.w)}>`
+    ? `<input name="r" inputmode="numeric" placeholder="повторы" aria-label="Повторы" ${val(seed.r ?? e.target?.reps)}><input name="w" inputmode="decimal" placeholder="+кг" aria-label="Доп. вес, кг" ${val(seed.w)}>${rpeSel}`
     : `<input name="km" inputmode="decimal" placeholder="км" aria-label="Дистанция, км" ${val(seed.km)}><input name="min" inputmode="decimal" placeholder="мин" aria-label="Время, мин" ${val(seed.min ?? e.target?.reps)}>`;
-  const complete = e.target && ex.type !== 'cardio' ? e.sets.length >= e.target.sets : e.target && e.sets.length > 0;
-  const meta = [e.target && `Цель: ${fmtTarget(ex.type, e.target)}`, prev && `Прошлый раз: ${prev.sets.map(s => fmtSet(ex.type, s)).join(' / ')}`]
+  const complete = sc ? e.sets.length >= schemeTotal(sc) : e.target && ex.type !== 'cardio' ? e.sets.length >= e.target.sets : e.target && e.sets.length > 0;
+  let done = 0;
+  const schemeHTML = sc ? `<ol class="scheme">${sc.map(g => { const from = done; done += g.n; const st = e.sets.length >= done ? 'done' : e.sets.length >= from ? 'now' : '';
+    return `<li class="${st}"><b>${esc(g.kg != null ? (g.n > 1 ? `${g.n} × ${g.reps} × ${fmtN(g.kg)} кг` : `${fmtN(g.kg)} кг × ${g.reps}`) : `${g.n} × ${g.reps}`)}</b>${g.note ? ` <span>${esc(g.note)}</span>` : ''}</li>`; }).join('')}</ol>` : '';
+  const meta = [!sc && e.target && `Цель: ${fmtTarget(ex.type, e.target)}`, prev && `Прошлый раз: ${prev.sets.map(s => fmtSet(ex.type, s)).join(' / ')}`]
     .filter(Boolean).map(esc).join('<br>');
   return `<div class="entry ${complete ? 'complete' : ''}" data-ex="${e.exId}" style="--c:${gc(ex.group)}">
     <div class="entry-head"><b style="flex:1">${esc(ex.name)}</b><button class="icon-btn" data-a="delEntry" aria-label="Убрать упражнение">${ICON.x}</button></div>
-    ${meta ? `<div class="meta">${meta}</div>` : ''}
+    ${schemeHTML}${meta ? `<div class="meta">${meta}</div>` : ''}
     ${e.sets.length ? `<div class="sets">${e.sets.map((s, i) => `<div class="set-row"><span class="i">${i + 1}</span><span class="v">${fmtSet(ex.type, s)}</span>
       <button class="icon-btn" data-a="delSet" data-i="${i}" aria-label="Удалить подход">${ICON.x}</button></div>`).join('')}</div>` : ''}
-    <div class="set-input">${inputs}<button class="btn primary" data-a="addSet" aria-label="Записать подход">+</button></div>
+    <div class="set-input ${ex.type === 'cardio' ? '' : 'with-rpe'}">${inputs}<button class="btn primary" data-a="addSet" aria-label="Записать подход">+</button></div>
   </div>`;
 }
 
@@ -490,7 +697,8 @@ function viewPlan() {
   const tplOpts = sel => `<option value="">Отдых</option>` + S.templates.map(t => `<option value="${t.id}" ${t.id === sel ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
   const sets = S.plan.days.reduce((a, id) => a + (tplById(id)?.items.reduce((b, i) => b + i.sets, 0) || 0), 0);
   const trainDays = S.plan.days.filter(id => tplById(id)).length;
-  return `<header class="head"><div><h1>План недели</h1>
+  const progNote = S.program ? `<section class="notice"><p>Сейчас идёт программа «${esc(S.program.title)}», поэтому «Сегодня» показывает её тренировки. План недели снова заработает, когда программа закончится или ты её отключишь.</p></section>` : '';
+  return `${progNote}<header class="head"><div><h1>План недели</h1>
       <div class="sub">${trainDays} ${plural(trainDays, 'тренировка', 'тренировки', 'тренировок')}, ${sets} ${plural(sets, 'подход', 'подхода', 'подходов')} по плану</div></div></header>
     <div class="list">${DOW_FULL.map((d, i) => {
       const t = tplById(S.plan.days[i]);
@@ -699,7 +907,7 @@ async function pullChanges() {
   let changed = 0, maxTs = lp ? lp.ts : null;
   for (const r of rows) {
     if (!maxTs || r.server_ts > maxTs) maxTs = r.server_ts;
-    if (!DATA_STORES.includes(r.kind) || !(r.kind === 'meta' ? r.id === 'plan' : vId(r.id))) continue;
+    if (!DATA_STORES.includes(r.kind) || !(r.kind === 'meta' ? SYNCED_META.has(r.id) : vId(r.id))) continue;
     const key = r.kind + '|' + r.id;
     const ob = await getOne('outbox', key);
     if (ob && ob._u >= r.updated_at) continue; // локальная правка новее — уйдёт при следующей отправке
@@ -920,8 +1128,8 @@ function viewAccount() {
 /* =========================================================
    Рендер и события
    ========================================================= */
-const TABS = [['today', 'Сегодня'], ['plan', 'План'], ['history', 'История'], ['progress', 'Прогресс'], ['ex', 'Упражнения']];
-const VIEWS = { today: viewToday, plan: viewPlan, history: viewHistory, progress: viewProgress, ex: viewExercises, account: viewAccount };
+const TABS = [['today', 'Сегодня'], ['goal', 'Цель'], ['plan', 'План'], ['history', 'История'], ['progress', 'Прогресс'], ['ex', 'Упражнения', 'Упражн.']];
+const VIEWS = { today: viewToday, goal: viewGoal, plan: viewPlan, history: viewHistory, progress: viewProgress, ex: viewExercises, account: viewAccount };
 function render(spin = false) {
   S.spin = spin;
   const y = window.scrollY;
@@ -929,8 +1137,8 @@ function render(spin = false) {
   document.body.classList.toggle('no-nav', gate);
   document.getElementById('app').innerHTML = gate ? viewGate() : VIEWS[S.tab]();
   const rec = !!active();
-  document.getElementById('nav').innerHTML = gate ? '' : TABS.map(([k, l]) =>
-    `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''} ${k === 'today' && rec ? 'rec' : ''}" ${S.tab === k ? 'aria-current="page"' : ''}>${ICON[k]}${l}</button>`).join('');
+  document.getElementById('nav').innerHTML = gate ? '' : TABS.map(([k, l, sh]) =>
+    `<button data-tab="${k}" class="${S.tab === k ? 'on' : ''} ${k === 'today' && rec ? 'rec' : ''}" ${S.tab === k ? 'aria-current="page"' : ''} aria-label="${l}">${ICON[k]}<span class="lf">${l}</span><span class="ls" aria-hidden="true">${sh || l}</span></button>`).join('');
   if (!spin) window.scrollTo(0, y);
 }
 
@@ -973,6 +1181,10 @@ document.addEventListener('click', ev => {
     reauth: () => { S.reauth = true; S.authEmail = CLOUD.user.email; S.authMode = 'signin'; S.authMsg = null; render(); },
     reauthCancel: () => { S.reauth = false; render(); },
     merge: mergeGuest,
+    progOn: activateProgram,
+    progOff: deactivateProgram,
+    progStart: () => startProgramSession(id),
+    progOpen: () => { S.openSession = S.openSession === id ? null : id; render(); },
     mergeNo: () => { LS.set('trainee-merge-dismissed:' + CLOUD.user.id, true); S.mergeOffer = null; render(); },
   })[b.dataset.a]?.();
 });
