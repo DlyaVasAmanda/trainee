@@ -1,10 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" rx="112" fill="#0f1115"/>
-  <g fill="#4ade80">
-    <rect x="96" y="212" width="40" height="88" rx="10"/>
-    <rect x="140" y="180" width="44" height="152" rx="10"/>
-    <rect x="328" y="180" width="44" height="152" rx="10"/>
-    <rect x="376" y="212" width="40" height="88" rx="10"/>
-    <rect x="184" y="242" width="144" height="28" rx="6"/>
+  <rect width="512" height="512" rx="112" fill="#14161A"/>
+  <!-- блин из четырёх цветов: грудь, спина, ноги, плечи -->
+  <g fill="none" stroke-width="96" transform="rotate(-90 256 256)">
+    <circle cx="256" cy="256" r="140" stroke="#D62839" stroke-dasharray="219.9 879.6"/>
+    <circle cx="256" cy="256" r="140" stroke="#2563C9" stroke-dasharray="219.9 879.6" stroke-dashoffset="-219.9"/>
+    <circle cx="256" cy="256" r="140" stroke="#E0A400" stroke-dasharray="219.9 879.6" stroke-dashoffset="-439.8"/>
+    <circle cx="256" cy="256" r="140" stroke="#1F9D55" stroke-dasharray="219.9 879.6" stroke-dashoffset="-659.7"/>
   </g>
+  <circle cx="256" cy="256" r="92" fill="#14161A"/>
+  <circle cx="256" cy="256" r="30" fill="#E8EBEE"/>
 </svg>
