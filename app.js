@@ -56,7 +56,7 @@ const TYPES = { strength: 'Со штангой/гантелями', bodyweight: 
 const TYPE_SHORT = { strength: 'вес', bodyweight: 'свой вес', cardio: 'кардио' };
 const GROUPS = {
   chest: 'Грудь', triceps: 'Трицепс', back: 'Спина', biceps: 'Бицепс',
-  legs: 'Ноги', shoulders: 'Плечи', abs: 'Пресс', cardio: 'Кардио', other: 'Другое',
+  legs: 'Ноги', glutes: 'Ягодицы', shoulders: 'Плечи', abs: 'Пресс', cardio: 'Кардио', other: 'Другое',
 };
 const gc = g => `var(--g-${GROUPS[g] ? g : 'other'})`;
 
@@ -140,8 +140,8 @@ const cleanScheme = x => vArr(x, 10).map(g => {
 }).filter(Boolean);
 function cleanProgram(x) {
   if (!isObj(x) || !isObj(x.goal)) return null;
-  const goal = { ex: vStr(x.goal.ex, 120), kg: vNum(x.goal.kg, 1, 500), date: vDate(x.goal.date) };
-  if (!goal.ex || goal.kg == null || !goal.date) return null;
+  const goal = { ex: vStr(x.goal.ex, 120), kg: vNum(x.goal.kg, 1, 500), gain: vNum(x.goal.gain, 0.01, 2), maxReps: vInt(x.goal.maxReps, 1, 20) || 10, date: vDate(x.goal.date) };
+  if (!goal.ex || (goal.kg == null && goal.gain == null) || !goal.date) return null;
   const sessions = vArr(x.sessions, 200).map(se => {
     if (!isObj(se) || !vDate(se.date)) return null;
     const items = vArr(se.items, 15).map(it => isObj(it) && vStr(it.ex, 120).trim() ? {
@@ -154,6 +154,7 @@ function cleanProgram(x) {
   if (!sessions.length) return null;
   return {
     key: 'program', id: vStr(x.id, 80), title: vStr(x.title, 120) || 'Программа', goal, base1RM: vNum(x.base1RM, 1, 500) || goal.kg,
+    chartTitle: vStr(x.chartTitle, 120),
     plasma: vArr(x.plasma, 60).map(vDate).filter(Boolean),
     blocks: vArr(x.blocks, 12).map(b => isObj(b) && vDate(b.from) && vDate(b.to) ? { name: vStr(b.name, 60), from: b.from, to: b.to } : null).filter(Boolean),
     coachNote: isObj(x.coachNote) && vStr(x.coachNote.text, 1000) ? { date: vDate(x.coachNote.date), text: vStr(x.coachNote.text, 1000) } : null,
@@ -454,9 +455,21 @@ function currentMax(p) { // расчётный максимум за 5 неде�
   const ex = exByName(p.goal.ex); if (!ex) return null;
   const since = Date.now() - 35 * 864e5; let best = null;
   for (const w of finished()) if (w.start >= since) for (const e of w.entries) if (e.exId === ex.id)
-    for (const x of e.sets) if (x.w && x.r && x.r <= 10) { const v = e1rm(x); if (!best || v > best.v) best = { v, x, date: w.start }; }
+    for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps) { const v = e1rm(x); if (!best || v > best.v) best = { v, x, date: w.start }; }
   return best;
 }
+// Старт: заданный в программе или лучший подход упражнения цели в первой тренировке программы (калибровка)
+function progBase(p) {
+  if (p.base1RM) return p.base1RM;
+  const ex = exByName(p.goal.ex); if (!ex) return null;
+  const from = fromKey(p.sessions[0].date).getTime();
+  const ws = finished().filter(w => w.start >= from && w.entries.some(e => e.exId === ex.id && e.sets.some(x => x.w && x.r))).sort((a, b) => a.start - b.start);
+  if (!ws.length) return null;
+  let best = 0;
+  for (const e of ws[0].entries) if (e.exId === ex.id) for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps) best = Math.max(best, e1rm(x));
+  return best ? Math.round(best * 2) / 2 : null;
+}
+const goalKg = p => { if (p.goal.kg != null) return p.goal.kg; const b = progBase(p); return b ? Math.round(b * (1 + p.goal.gain) / 2.5) * 2.5 : null; };
 async function ensureExercise(it) {
   let ex = exByName(it.ex);
   if (!ex) {
@@ -473,9 +486,16 @@ async function startProgramSession(key) {
   const w = { id: uid(), start: Date.now(), finished: false, templateId: null, programDate: se.id, title: se.title, entries };
   S.workouts.push(w); await saveW(w); S.tab = 'today'; S.adding = false; render(true); window.scrollTo(0, 0);
 }
-async function activateProgram() {
+const PROGRAMS = [
+  { id: 'bench-100-2026', title: 'Жим 100 кг к Новому году', plate: [['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]],
+    text: '9 недель, 3 блока, тест 27 декабря. Тренировки в Пн, Вт, Сб, Вс, сдачи плазмы по понедельникам учтены.' },
+  { id: 'glutes-2026', title: 'Ягодицы к Новому году', plate: [['glutes', 4], ['legs', 2], ['back', 1], ['shoulders', 1]],
+    text: '8 недель: калибровка, 2 блока, разгрузка и тест ягодичного моста 27 декабря. Те же дни: Сб, Вс, Пн, Вт, 3–4 тренировки в неделю.' },
+];
+async function activateProgram(id) {
+  const meta = PROGRAMS.find(x => x.id === id); if (!meta) return;
   try {
-    const res = await fetch('programs/bench-100-2026.json', { cache: 'no-cache' });
+    const res = await fetch(`programs/${meta.id}.json`, { cache: 'no-cache' });
     const p = cleanProgram(await res.json()); if (!p) throw new Error('bad program');
     await dataPut('meta', p); S.program = p; render(true);
   } catch { alert('Не удалось загрузить программу. Проверь интернет и попробуй ещё раз.'); }
@@ -567,22 +587,52 @@ function programHero(ps, pl, date, label, spin, isToday) {
 }
 
 /* --- Цель --- */
-function goalChart(p) {
+function bestE1(w, p) { // лучший расчётный максимум упражнения цели в тренировке
+  const ex = exByName(p.goal.ex); if (!w || !ex) return null;
+  let best = null;
+  for (const e of w.entries) if (e.exId === ex.id) for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps && (!best || e1rm(x) > best.v)) best = { v: e1rm(x), x };
+  return best;
+}
+function e1Chart(p, gk, base) {
+  const facts = p.sessions.map(se => ({ se, b: bestE1(sessionWorkout(se), p) })).filter(o => o.b);
+  if (!facts.length) return '';
+  const W = 360, H = 196, l = 10, r = 346, y0 = 22, bot = 160;
+  const d0 = p.sessions[0].date, d1 = p.goal.date;
+  const t0 = fromKey(d0).getTime(), t1 = fromKey(d1).getTime();
+  const X = k => l + (fromKey(k).getTime() - t0) / (t1 - t0 || 1) * (r - l);
+  const vals = facts.map(o => o.b.v).concat([gk, base || gk]);
+  const lo = Math.floor(Math.min(...vals) * 0.95 / 5) * 5, hi = Math.max(...vals) + 2.5;
+  const Y = v => bot - (v - lo) / (hi - lo) * (bot - y0);
+  const path = facts.map((o, i) => `${i ? 'L' : 'M'}${X(o.se.date).toFixed(1)},${Y(o.b.v).toFixed(1)}`).join(' ');
+  const last = facts.at(-1);
+  return `<svg class="goal-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(p.chartTitle || 'Расчётный максимум')}: план и факт">
+    <line x1="${l}" x2="${r}" y1="${Y(gk)}" y2="${Y(gk)}" stroke="var(--mute)" stroke-dasharray="5 4" stroke-width="1"/>
+    <text x="${l}" y="${Y(gk) - 5}" class="lbl">цель ${fmtN(gk)} кг</text>
+    ${base ? `<path d="M${X(d0).toFixed(1)},${Y(base).toFixed(1)} L${X(d1).toFixed(1)},${Y(gk).toFixed(1)}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/>` : ''}
+    <path d="${path}" fill="none" stroke="var(--g-back)" stroke-width="2.5" stroke-linejoin="round"/>
+    ${facts.map(o => `<circle cx="${X(o.se.date)}" cy="${Y(o.b.v)}" r="4.5" fill="var(--g-back)"><title>${shortKey(o.se.date)}: ${fmtN(o.b.x.w)} × ${o.b.x.r} ≈ ${fmtN(Math.round(o.b.v * 2) / 2)} кг</title></circle>`).join('')}
+    <text x="${Math.min(X(last.se.date), r - 40)}" y="${Y(last.b.v) - 9}" class="lbl strong">≈${fmtN(Math.round(last.b.v * 2) / 2)}</text>
+    <text x="${l}" y="${H - 18}" class="lbl">${shortKey(d0)}</text><text x="${r}" y="${H - 18}" class="lbl" text-anchor="end">${shortKey(d1)}</text>
+    <circle cx="${l + 4}" cy="${H - 4}" r="3.5" fill="var(--g-back)"/><text x="${l + 12}" y="${H - 1}" class="lbl">факт</text>
+    <line x1="${l + 52}" x2="${l + 70}" y1="${H - 4}" y2="${H - 4}" stroke="var(--mute)" stroke-dasharray="2 4" stroke-width="1.5"/><text x="${l + 76}" y="${H - 1}" class="lbl">план</text>
+  </svg>`;
+}
+function goalChart(p, gk, b0) {
   const tops = p.sessions.filter(se => se.top);
-  if (tops.length < 2) return '';
+  if (tops.length < 2) return e1Chart(p, gk, b0);
   const W = 360, H = 196, l = 10, r = 346, y0 = 22, base = 160;
   const t0 = fromKey(tops[0].date).getTime(), t1 = fromKey(tops.at(-1).date).getTime();
   const X = k => l + (fromKey(k).getTime() - t0) / (t1 - t0 || 1) * (r - l);
   const facts = tops.map(se => ({ se, f: topSet(sessionWorkout(se), p.goal.ex) })).filter(o => o.f);
-  const vals = tops.map(se => se.top.kg).concat(facts.map(o => o.f.w), [p.goal.kg]);
+  const vals = tops.map(se => se.top.kg).concat(facts.map(o => o.f.w), [gk]);
   const lo = Math.floor(Math.min(...vals) / 5) * 5 - 2.5, hi = Math.max(...vals) + 2.5;
   const Y = v => base - (v - lo) / (hi - lo) * (base - y0);
   const planPath = tops.map((se, i) => `${i ? 'L' : 'M'}${X(se.date).toFixed(1)},${Y(se.top.kg).toFixed(1)}`).join(' ');
   const factPath = facts.map((o, i) => `${i ? 'L' : 'M'}${X(o.se.date).toFixed(1)},${Y(o.f.w).toFixed(1)}`).join(' ');
   const lastF = facts.at(-1);
   return `<svg class="goal-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Верхний подход по субботам: план и факт">
-    <line x1="${l}" x2="${r}" y1="${Y(p.goal.kg)}" y2="${Y(p.goal.kg)}" stroke="var(--mute)" stroke-dasharray="5 4" stroke-width="1"/>
-    <text x="${l}" y="${Y(p.goal.kg) - 5}" class="lbl">цель ${fmtN(p.goal.kg)} кг</text>
+    <line x1="${l}" x2="${r}" y1="${Y(gk)}" y2="${Y(gk)}" stroke="var(--mute)" stroke-dasharray="5 4" stroke-width="1"/>
+    <text x="${l}" y="${Y(gk) - 5}" class="lbl">цель ${fmtN(gk)} кг</text>
     <path d="${planPath}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/>
     ${tops.map(se => `<circle cx="${X(se.date)}" cy="${Y(se.top.kg)}" r="2.5" fill="var(--mute)"><title>План ${shortKey(se.date)}: ${fmtN(se.top.kg)} × ${se.top.reps}</title></circle>`).join('')}
     ${facts.length ? `<path d="${factPath}" fill="none" stroke="var(--g-back)" stroke-width="2.5" stroke-linejoin="round"/>` : ''}
@@ -596,29 +646,39 @@ function goalChart(p) {
 function viewGoal() {
   const p = S.program;
   if (!p) return `<header class="head"><div><h1>Цель</h1><div class="sub">Программа тренера с весами на каждую тренировку</div></div>${avatarBtn()}</header>
-    <section class="sheet"><div class="hero">${plate([['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]], 'big spin')}<div>
-      <h2>Жим 100 кг к Новому году</h2><p class="mute small">9 недель, 3 блока, тест 27 декабря. Тренировки в Пн, Вт, Сб, Вс, сдачи плазмы по понедельникам учтены.</p></div></div>
-      <button class="btn primary big block" style="margin-top:18px" data-a="progOn">Подключить программу</button></section>`;
+    ${PROGRAMS.map((x, i) => `<section class="sheet" ${i ? 'style="margin-top:12px"' : ''}><div class="hero">${plate(x.plate, 'big' + (i ? '' : ' spin'))}<div>
+      <h2>${esc(x.title)}</h2><p class="mute small">${esc(x.text)}</p></div></div>
+      <button class="btn ${i ? '' : 'primary '}big block" style="margin-top:18px" data-a="progOn" data-id="${x.id}">Подключить</button></section>`).join('')}`;
   const today = dk(Date.now());
   const daysLeft = Math.round((fromKey(p.goal.date) - startOfDay(Date.now())) / 864e5);
-  const best = currentMax(p), est = best ? best.v : p.base1RM;
-  // Шкала от ~85% цели до цели: видно и старт, и текущую оценку, даже если она пока ниже старта
-  const lo = Math.floor(Math.min(p.base1RM, est, p.goal.kg * 0.9) * 0.95 / 5) * 5, span = (p.goal.kg - lo) || 1;
-  const pct = Math.max(0.02, Math.min(1, (est - lo) / span)), basePct = Math.max(0, Math.min(1, (p.base1RM - lo) / span));
+  const base = progBase(p), gk = goalKg(p);
+  const best = currentMax(p), est = best ? best.v : base;
+  let hero;
+  if (gk == null) hero = `<div class="goal-top"><div><div class="goal-kg num">+${fmtN(Math.round(p.goal.gain * 100))}<small> %</small></div>
+      <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
+      <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
+    <p class="mute small" style="margin-top:10px">Цель в килограммах посчитается после первой тренировки с упражнением «${esc(p.goal.ex)}»: расчётный максимум из калибровки плюс ${fmtN(Math.round(p.goal.gain * 100))}%.</p>`;
+  else {
+    const b0 = base ?? est ?? gk * 0.9, e0 = est ?? b0;
+    // Шкала от ~85% цели до цели: видно и старт, и текущую оценку, даже если она пока ниже старта
+    const lo = Math.floor(Math.min(b0, e0, gk * 0.9) * 0.95 / 5) * 5, span = (gk - lo) || 1;
+    const pct = Math.max(0.02, Math.min(1, (e0 - lo) / span)), basePct = Math.max(0, Math.min(1, (b0 - lo) / span));
+    hero = `<div class="goal-top"><div><div class="goal-kg num">${fmtN(gk)}<small> кг</small></div>
+        <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
+        <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
+      <div class="track" role="img" aria-label="Расчётный максимум ${fmtN(Math.round(e0 * 2) / 2)} кг из ${fmtN(gk)}, старт ${fmtN(b0)}"><div class="fill" style="width:${(pct * 100).toFixed(1)}%"></div><div class="tick" style="left:${(basePct * 100).toFixed(1)}%"></div></div>
+      <div class="track-legend"><span>${fmtN(lo)}</span><b>сейчас ≈ ${fmtN(Math.round(e0 * 2) / 2)} кг</b><span>${fmtN(gk)}</span></div>
+      <p class="mute small">Метка на шкале — старт программы, ${fmtN(b0)} кг${p.goal.kg == null ? `. Цель: старт + ${fmtN(Math.round(p.goal.gain * 100))}%` : ''}.</p>
+      <p class="mute small" style="margin-top:6px">${best ? `Расчёт по подходу ${fmtSet('strength', best.x)} от ${shortKey(dk(best.date))} (формула Эпли).` : 'Пока это стартовая оценка. Она обновится после первых тяжёлых подходов.'}</p>`;
+  }
+  const chart = gk == null ? '' : goalChart(p, gk, base);
   const next = p.sessions.find(se => se.date >= today && !sessionWorkout(se));
   const plasmaToday = isPlasma(today);
   const nextLabel = !next ? '' : next.date === today ? 'Сегодня' : next.date === dk(Date.now() + 864e5) ? 'Завтра' : DOW_FULL[dowOf(fromKey(next.date))];
   const rows = [...p.sessions.map(se => ({ k: se.date, se })), ...p.plasma.map(k => ({ k, plasma: true }))].sort((a, b) => a.k < b.k ? -1 : a.k > b.k ? 1 : a.plasma ? -1 : 1);
   const blocks = p.blocks.length ? p.blocks : [{ name: 'Программа', from: rows[0].k, to: rows.at(-1).k }];
   return `<header class="head"><div><h1>Цель</h1><div class="sub">${esc(p.title)}</div></div>${avatarBtn()}</header>
-    <section class="sheet goal-hero">
-      <div class="goal-top"><div><div class="goal-kg num">${fmtN(p.goal.kg)}<small> кг</small></div>
-        <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
-        <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
-      <div class="track" role="img" aria-label="Расчётный максимум ${fmtN(Math.round(est * 2) / 2)} кг из ${fmtN(p.goal.kg)}, старт ${fmtN(p.base1RM)}"><div class="fill" style="width:${(pct * 100).toFixed(1)}%"></div><div class="tick" style="left:${(basePct * 100).toFixed(1)}%"></div></div>
-      <div class="track-legend"><span>${fmtN(lo)}</span><b>сейчас ≈ ${fmtN(Math.round(est * 2) / 2)} кг</b><span>${fmtN(p.goal.kg)}</span></div>
-      <p class="mute small">Метка на шкале — старт программы, ${fmtN(p.base1RM)} кг.</p>
-      <p class="mute small" style="margin-top:6px">${best ? `Расчёт по подходу ${fmtSet('strength', best.x)} от ${shortKey(dk(best.date))} (формула Эпли).` : 'Пока это стартовая оценка. Она обновится после первых тяжёлых подходов.'}</p>
+    <section class="sheet goal-hero">${hero}
     </section>
     ${p.coachNote ? `<section class="coach"><div class="mute small">Тренер${p.coachNote.date ? ', ' + shortKey(p.coachNote.date) : ''}</div><p>${esc(p.coachNote.text)}</p></section>` : ''}
     ${plasmaToday ? `<section class="notice" style="margin:12px 0 0;box-shadow:inset 4px 0 0 var(--g-chest)"><p><b>Сегодня сдача плазмы.</b> Силовой нет, пей больше воды и ешь белок.</p></section>` : ''}
@@ -626,7 +686,7 @@ function viewGoal() {
       <div class="plan-rows" style="margin-top:8px">${next.items.slice(0, 2).map(it => `<div class="plan-row"><span class="dot" style="--c:${gc(exByName(it.ex)?.group || it.group)}"></span><span>${esc(it.ex)}</span><span class="target">${esc(schemeText(it.scheme))}</span></div>`).join('')}
       ${next.items.length > 2 ? `<p class="mute small" style="margin-top:6px">и ещё ${next.items.length - 2} ${plural(next.items.length - 2, 'упражнение', 'упражнения', 'упражнений')}</p>` : ''}</div>
       ${active() ? '<p class="mute small" style="margin-top:12px">Сейчас идёт тренировка, её видно на вкладке «Сегодня».</p>' : plasmaToday && next.date !== today ? '' : `<button class="btn primary big block" style="margin-top:14px" data-a="progStart" data-id="${next.date}">${next.date === today ? 'Начать тренировку' : 'Начать сейчас'}</button>`}</section>` : ''}
-    <section class="sheet" style="margin-top:12px"><h3>Верхний подход по субботам</h3>${goalChart(p)}</section>
+    ${chart ? `<section class="sheet" style="margin-top:12px"><h3>${esc(p.chartTitle || 'Верхний подход по субботам')}</h3>${chart}</section>` : ''}
     <div class="section"><h2>Расписание</h2>
     ${blocks.map(b => { const list = rows.filter(x => x.k >= b.from && x.k <= b.to); return list.length ? `<h3 class="block-h">${esc(b.name)} <span class="mute small">${shortKey(b.from)} – ${shortKey(b.to)}</span></h3>
       <div class="list">${list.map(x => schedRow(x, today, p)).join('')}</div>` : ''; }).join('')}</div>
@@ -1181,7 +1241,7 @@ document.addEventListener('click', ev => {
     reauth: () => { S.reauth = true; S.authEmail = CLOUD.user.email; S.authMode = 'signin'; S.authMsg = null; render(); },
     reauthCancel: () => { S.reauth = false; render(); },
     merge: mergeGuest,
-    progOn: activateProgram,
+    progOn: () => activateProgram(id),
     progOff: deactivateProgram,
     progStart: () => startProgramSession(id),
     progOpen: () => { S.openSession = S.openSession === id ? null : id; render(); },
