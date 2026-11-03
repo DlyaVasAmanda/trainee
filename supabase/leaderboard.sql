@@ -42,7 +42,7 @@ revoke truncate, references, trigger on public.leaderboard from authenticated;
 grant select, insert, update, delete on public.leaderboard to authenticated;
 revoke execute on function public.leaderboard_touch() from public, anon, authenticated;
 
--- Общий список: топ-100 + своя строка. Неделя считается по Праге (понедельник).
+-- Общий список: топ-100 + своя строка. board: 'xp' — опыт за всё время, 'strength' — сила, 'week' — опыт за неделю (по Праге).
 create or replace function public.get_leaderboard(board text)
 returns table (rank integer, nick text, score integer, level integer, me boolean)
 language sql stable security definer set search_path = '' as $$
@@ -50,7 +50,8 @@ language sql stable security definer set search_path = '' as $$
   s as (
     select l.nick, l.level, l.user_id = auth.uid() as me,
            case when board = 'strength' then coalesce(l.strength, 0)
-                when l.week_start = (select wk from cur) then l.week_xp else 0 end as score
+                when board = 'week' then case when l.week_start = (select wk from cur) then l.week_xp else 0 end
+                else l.total_xp end as score
     from public.leaderboard l
   ),
   r as (select (row_number() over (order by score desc, lower(nick)))::integer as rank, nick, score, level, me from s where score > 0 or me)

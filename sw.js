@@ -1,6 +1,6 @@
 // Оболочка: stale-while-revalidate — мгновенно из кэша, обновление подтягивается в фоне
 // и применяется при следующем открытии. Шрифты Google кэшируются для офлайна.
-const CACHE = 'trainee-v10';
+const CACHE = 'trainee-v11';
 const FONTS = 'trainee-fonts-v1';
 const SHELL = ['./', './index.html', './config.js', './vendor/supabase-2.117.2.js', './cloud.js', './app.js', './programs/bench-100-2026.json', './programs/glutes-2026.json', './programs/novice-fullbody.json', './programs/mass-upper-lower.json', './programs/strength-waves.json', './programs/home-bodyweight.json', './manifest.webmanifest', './icon.svg', './icon-180.png', './icon-192.png', './icon-512.png'];
 

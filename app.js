@@ -1066,8 +1066,8 @@ function levelsHTML() {
 }
 function boardHTML() {
   if (!Cloud) return '';
-  const kind = S.boardKind || 'week', pf = S.profile || {};
-  const seg = `<div class="seg" role="tablist">${[['week', 'Неделя'], ['strength', 'Сила']].map(([k, l]) => `<button role="tab" aria-selected="${kind === k}" class="${kind === k ? 'on' : ''}" data-a="boardKind" data-id="${k}">${l}</button>`).join('')}</div>`;
+  const kind = S.boardKind || 'xp', pf = S.profile || {};
+  const seg = `<div class="seg" role="tablist">${[['xp', 'Опыт'], ['strength', 'Сила']].map(([k, l]) => `<button role="tab" aria-selected="${kind === k}" class="${kind === k ? 'on' : ''}" data-a="boardKind" data-id="${k}">${l}</button>`).join('')}</div>`;
   const head = `<section class="sheet" style="margin-top:12px"><div class="row-between"><h3>Рейтинг</h3>${CLOUD.user && pf.board && !S.boardEdit ? seg : ''}</div>`;
   const err = S.boardErr ? `<p class="msg error" style="margin-top:10px">${esc(S.boardErr)}</p>` : '';
   if (!CLOUD.user) return head + `<p class="mute small" style="margin-top:6px">Войди в аккаунт, чтобы соревноваться с друзьями.</p></section>`;
@@ -1083,7 +1083,7 @@ function boardHTML() {
     : b.err ? `<p class="msg error" style="margin-top:10px">${esc(b.err)}</p>`
     : rows.length ? `<ol class="board">${rows.map(r => `<li class="${r.me ? 'me' : ''}"><span class="rk num">${r.rank}</span><span class="nm">${esc(r.nick)} <span class="mute small">ур. ${r.level}</span></span><b class="num">${r.score}</b></li>`).join('')}</ol>`
     : '<p class="mute small" style="margin-top:10px">Пока пусто. Заверши тренировку, и ты появишься в списке.</p>';
-  const how = kind === 'week' ? 'Опыт за эту неделю (с понедельника). Обнуляется каждую неделю.'
+  const how = kind === 'xp' ? 'Весь опыт за всё время, не обнуляется. Рядом с ником — общий уровень.'
     : `Сумма расчётных максимумов в жиме лёжа, приседе, становой и жиме стоя за 90 дней, делённая на вес тела, ×100.${pf.bw ? '' : ' Укажи вес тела в настройках, чтобы попасть в этот рейтинг.'}`;
   return head + list + `<p class="mute small" style="margin-top:10px">${how}</p>${err}
     <button class="btn ghost sm" style="margin-top:6px" data-a="boardEdit">Ник и вес тела</button></section>`;
