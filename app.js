@@ -517,9 +517,9 @@ const PROGRAMS = [
   { id: 'home-bodyweight', template: true, perWeek: 3, days: [0, 2, 4], title: 'Дома без железа', plate: [['chest', 2], ['legs', 2], ['back', 1], ['glutes', 1], ['abs', 1]],
     text: '12 недель, 3 тренировки дома: нужны пол, стул и стол или турник. Прогрессия через более сложные варианты упражнений.' },
   { id: 'bench-100-2026', personal: true, title: 'Жим 100 кг к Новому году', plate: [['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]],
-    text: 'Личная программа по датам: 9 недель, тест 27 декабря. Пн, Вт, Сб, Вс, сдачи плазмы учтены.' },
+    text: 'Личная программа по датам: 9 недель, тест 27 декабря. Пн, Чт, Сб, Вс, сдачи плазмы учтены.' },
   { id: 'glutes-2026', personal: true, title: 'Ягодицы к Новому году', plate: [['glutes', 4], ['legs', 2], ['back', 1], ['shoulders', 1]],
-    text: 'Личная программа по датам: калибровка, 2 блока, тест 27 декабря. Сб, Вс, Пн, Вт.' },
+    text: 'Личная программа по датам: калибровка, 2 блока, тест 27 декабря. Сб, Вс, Пн, Чт.' },
 ];
 // Шаблон → программа с датами: неделя 1 начинается в день подключения, дни недели выбирает человек
 function genProgram(tpl, days, start = startOfDay(Date.now())) {
@@ -711,7 +711,7 @@ function viewToday() {
 function programHero(ps, pl, date, label, spin, isToday) {
   const when = `<div class="mute small">${label}, ${longDate(date)}</div>`;
   if (!ps && pl) return `<div class="hero">${plate([], 'big ' + spin, ICON.drop)}<div>${when}<h2>Сдача плазмы</h2>
-    <p class="mute small">Силовой сегодня нет. Больше воды и белка. Завтра тренировка умеренная, RPE не выше 7.</p></div></div>`;
+    <p class="mute small">Силовой сегодня нет. Больше воды и белка. Следующая тренировка умеренная, RPE не выше 7.</p></div></div>`;
   if (!ps) return `<div class="hero">${plate([], 'big ' + spin)}<div>${when}<h2>День отдыха</h2>
     <p class="mute small">По программе отдых. Восстановление тоже работает на результат.</p></div></div>`;
   const weights = sessionWeights(ps);
