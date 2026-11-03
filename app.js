@@ -1000,17 +1000,68 @@ function chart(pts, color) {
     <text x="${X(pts.length - 1)}" y="${Y(pts.at(-1).y) - 12}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmtN(pts.at(-1).y)}</text>
     <text x="${px}" y="${H - 4}">${shortDate(pts[0].t)}</text><text x="${W - px}" y="${H - 4}" text-anchor="end">${shortDate(pts.at(-1).t)}</text></svg>`;
 }
+/* Схема тела: левая половина каждой фигуры, правая — зеркально. [группа | null, путь] */
+const BODY_FRONT = [
+  [null, 'M90,62 C86,68 82,74 80,79 C88,77 94,77 100,79 L100,62 Z'],
+  ['shoulders', 'M80,78 C70,72 56,74 52,88 C50,98 51,108 55,116 C59,104 64,96 70,92 C72,86 76,81 80,78 Z'],
+  ['chest', 'M100,80 L100,118 C90,124 76,122 69,112 C67,100 71,88 81,81 C88,78 94,78 100,80 Z'],
+  ['biceps', 'M55,120 C50,134 50,148 54,162 L64,162 C68,148 69,132 66,118 C62,116 58,117 55,120 Z'],
+  [null, 'M54,166 C50,184 50,200 54,216 L62,216 C66,200 68,184 64,166 Z'],
+  ['abs', 'M100,124 L85,124 L86,188 C90,195 95,198 100,199 Z'],
+  ['abs', 'M69,118 C75,125 80,127 83,127 L84,188 C78,184 74,176 72,166 C70,150 69,134 69,118 Z'],
+  ['legs', 'M72,198 C66,222 66,256 72,288 C78,298 92,298 96,288 C100,262 100,236 98,216 C90,212 80,206 72,198 Z'],
+  ['legs', 'M74,312 C70,336 72,360 76,380 L90,380 C94,360 96,336 92,312 Z'],
+];
+const BODY_BACK = [
+  ['back', 'M100,60 L100,112 C92,100 84,90 77,82 C84,74 92,66 100,60 Z'],
+  ['shoulders', 'M78,80 C70,72 56,74 52,88 C50,98 51,108 55,116 C59,104 64,96 70,92 C72,87 75,83 78,80 Z'],
+  ['back', 'M71,96 C68,120 72,148 82,170 C90,168 96,160 100,150 L100,116 C92,106 82,99 71,96 Z'],
+  ['triceps', 'M55,120 C50,134 50,148 54,162 L64,162 C68,148 69,132 66,118 C62,116 58,117 55,120 Z'],
+  [null, 'M54,166 C50,184 50,200 54,216 L62,216 C66,200 68,184 64,166 Z'],
+  ['back', 'M84,174 C90,170 96,164 100,158 L100,192 L86,192 Z'],
+  ['glutes', 'M72,196 C69,214 77,232 98,234 C100,222 100,208 100,196 C90,192 80,192 72,196 Z'],
+  ['legs', 'M72,238 C68,260 70,280 74,296 L96,296 C98,278 98,258 98,238 C90,242 80,242 72,238 Z'],
+  ['legs', 'M74,312 C68,330 70,350 78,368 L90,368 C95,350 95,330 90,312 Z'],
+];
+// Где на схеме стоит значок уровня группы: [фигура 0 = спереди, 1 = сзади, x, y]
+const BODY_BADGE = { chest: [0, 86, 100], shoulders: [0, 58, 90], biceps: [0, 59, 140], abs: [0, 100, 160], legs: [0, 84, 250],
+  back: [1, 86, 130], triceps: [1, 59, 140], glutes: [1, 86, 214] };
+function bodyMap(m, sel) {
+  const lvOpacity = g => !m[g] ? 0.14 : Math.min(1, 0.32 + (lvlOf(m[g]) - 1) * 0.06).toFixed(2);
+  const part = ([g, d]) => g
+    ? `<path d="${d}" data-a="lvSel" data-id="${g}" fill="var(--g-${g})" fill-opacity="${lvOpacity(g)}" class="bm-m${sel === g ? ' on' : ''}"><title>${GROUPS[g]}: уровень ${lvlOf(m[g] || 0)}</title></path>`
+    : `<path d="${d}" class="bm-n"/>`;
+  const fig = (shapes, dx, label) => `<g transform="translate(${dx} 0)">
+      <ellipse cx="100" cy="32" rx="17" ry="21" class="bm-n"/><path d="M92,50 L108,50 L110,64 L90,64 Z" class="bm-n"/>
+      ${shapes.map(part).join('')}<g transform="translate(200 0) scale(-1 1)">${shapes.map(part).join('')}</g>
+      <ellipse cx="57" cy="226" rx="6" ry="9" class="bm-n"/><ellipse cx="143" cy="226" rx="6" ry="9" class="bm-n"/>
+      <circle cx="84" cy="303" r="7" class="bm-n"/><circle cx="116" cy="303" r="7" class="bm-n"/>
+      <ellipse cx="83" cy="388" rx="10" ry="5" class="bm-n"/><ellipse cx="117" cy="388" rx="10" ry="5" class="bm-n"/>
+      <text x="100" y="408" text-anchor="middle" class="bm-cap">${label}</text></g>`;
+  const badges = Object.entries(BODY_BADGE).map(([g, [f, x, y]]) => `<g data-a="lvSel" data-id="${g}" class="bm-b${sel === g ? ' on' : ''}" transform="translate(${f * 210 + x} ${y})">
+      <circle r="11.5" fill="var(--surface)" stroke="var(--g-${g})" stroke-width="2.5"/><text y="4.5" text-anchor="middle">${lvlOf(m[g] || 0)}</text></g>`).join('');
+  return `<svg class="body-map" viewBox="42 0 326 416" role="img" aria-label="Уровни мышц: ${Object.keys(BODY_BADGE).map(g => `${GROUPS[g]} ${lvlOf(m[g] || 0)}`).join(', ')}">
+    ${fig(BODY_FRONT, 0, 'Спереди')}${fig(BODY_BACK, 210, 'Сзади')}${badges}</svg>`;
+}
 function levelsHTML() {
-  const { m, total } = xpStats(), L = lvlOf(total, TOTAL_K), wk = xpStats(weekStart().getTime()).total;
+  const { m, total } = xpStats(), L = lvlOf(total, TOTAL_K), wk = xpStats(weekStart().getTime());
   const pct = (xp, l, k) => Math.max(2, Math.min(100, (xp - lvlXP(l, k)) / (lvlXP(l + 1, k) - lvlXP(l, k)) * 100)).toFixed(1);
-  const groups = XP_MAIN.concat(XP_EXTRA.filter(g => m[g]));
+  const sel = S.lvSel && GROUPS[S.lvSel] ? S.lvSel : null;
+  let detail;
+  if (sel) {
+    const xp = m[sel] || 0, l = lvlOf(xp);
+    detail = `<div class="bm-detail" style="--c:${gc(sel)}"><span class="lv-n num">${l}</span><div class="lv-b">
+        <div class="row-between"><b>${GROUPS[sel]}</b><span class="mute small">${rankOf(l)}</span></div>
+        <div class="lv-bar"><i style="width:${pct(xp, l, 50)}%"></i></div>
+        <div class="mute small lv-sub">${xp - lvlXP(l)} / ${lvlXP(l + 1) - lvlXP(l)} XP до уровня ${l + 1} · за неделю +${wk.m[sel] || 0}</div></div></div>`;
+  } else detail = '<p class="mute small" style="text-align:center;margin-top:4px">Нажми на мышцу, чтобы увидеть подробности. Чем ярче цвет, тем выше уровень.</p>';
+  const extra = XP_EXTRA.filter(g => m[g] && !BODY_BADGE[g]);
   return `<section class="sheet lv-hero"><div class="lv-top"><div><div class="mute small">Общий уровень</div><div class="lv-big num">${L}</div><div class="mute small">${rankOf(L)}</div></div>
-      <div style="text-align:right"><div class="mute small">За эту неделю</div><div class="num" style="font-size:28px">+${wk}</div><div class="mute small">XP</div></div></div>
+      <div style="text-align:right"><div class="mute small">За эту неделю</div><div class="num" style="font-size:28px">+${wk.total}</div><div class="mute small">XP</div></div></div>
       <div class="lv-bar big"><i style="width:${pct(total, L, TOTAL_K)}%"></i></div>
       <div class="mute small" style="margin-top:6px">${total - lvlXP(L, TOTAL_K)} / ${lvlXP(L + 1, TOTAL_K) - lvlXP(L, TOTAL_K)} XP до уровня ${L + 1}</div></section>
-    <div class="lv-grid">${groups.map(g => { const xp = m[g] || 0, l = lvlOf(xp);
-      return `<div class="lv" style="--c:${gc(g)}"><span class="lv-n num">${l}</span><div class="lv-b"><b class="lv-name">${GROUPS[g]}</b>
-        <div class="lv-bar"><i style="width:${pct(xp, l, 50)}%"></i></div><div class="mute small lv-sub">${rankOf(l)} · ${xp - lvlXP(l)}/${lvlXP(l + 1) - lvlXP(l)}</div></div></div>`; }).join('')}</div>
+    <section class="sheet" style="margin-top:12px">${bodyMap(m, sel)}${detail}
+      ${extra.length ? `<div class="chips" style="margin-top:10px;justify-content:center">${extra.map(g => `<span class="chip"><span class="dot" style="--c:${gc(g)}"></span>${GROUPS[g]}: уровень ${lvlOf(m[g])}</span>`).join('')}</div>` : ''}</section>
     <p class="mute small" style="margin:8px 2px 0">Опыт за рабочие подходы: 10 XP, на RPE 8+ — 12. В зачёт идут до ${XP_CAP} подходов на группу за тренировку.</p>`;
 }
 function boardHTML() {
@@ -1432,6 +1483,7 @@ document.addEventListener('click', ev => {
     merge: mergeGuest,
     progOn: () => activateProgram(id),
     xpClose: () => { S.xpToast = null; render(); },
+    lvSel: () => { S.lvSel = S.lvSel === id ? null : id; render(); },
     boardKind: () => { S.boardKind = id; render(); },
     boardJoin,
     boardLeave,

@@ -111,6 +111,14 @@
   .board .rk{width:26px;font-size:17px;color:var(--mute)} .board .nm{flex:1;min-width:0;overflow-wrap:anywhere} .board b{font-size:18px}
   .xp-toast{background:var(--surface);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;box-shadow:inset 4px 0 0 var(--g-legs)}
   .xp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px} .xp-top b{font-size:24px}
+  .body-map{display:block;width:100%;max-width:420px;margin:0 auto;height:auto;-webkit-tap-highlight-color:transparent}
+  .body-map .bm-n{fill:var(--surface-2)}
+  .body-map .bm-m{stroke:var(--surface);stroke-width:1.6;cursor:pointer;transition:fill-opacity .2s}
+  .body-map .bm-m.on{stroke:var(--ink);stroke-width:2.2}
+  .body-map .bm-b{cursor:pointer} .body-map .bm-b text{font:700 13px var(--f-body);fill:var(--ink)}
+  .body-map .bm-b.on circle{fill:var(--ink)} .body-map .bm-b.on text{fill:var(--surface)}
+  .body-map .bm-cap{font:500 12px var(--f-body);fill:var(--mute)}
+  .bm-detail{display:flex;gap:12px;align-items:center;background:var(--surface-2);border-radius:var(--r-md);padding:12px;margin-top:8px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:4px 10px 4px 8px;border-radius:999px;background:var(--surface-2)}
   .tag{font-size:12px;color:var(--mute);background:var(--surface-2);border-radius:6px;padding:1px 6px;white-space:nowrap}
