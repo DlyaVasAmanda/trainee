@@ -28,6 +28,11 @@ const Cloud = (() => {
     // rows: [{ user_id, kind, id, data, deleted, updated_at }]
     async push(rows) { must(await sb.from('records').upsert(rows, { onConflict: 'user_id,kind,id' })); },
 
+    // Рейтинг: своя строка (ник и очки) и общий список через функцию get_leaderboard
+    async boardSave(row) { must(await sb.from('leaderboard').upsert(row, { onConflict: 'user_id' })); },
+    async boardDelete(userId) { must(await sb.from('leaderboard').delete().eq('user_id', userId)); },
+    async board(kind) { return must(await sb.rpc('get_leaderboard', { board: kind })); },
+
     // Все записи с server_ts >= since (или все, если since пуст), постранично
     async pull(since) {
       const out = [];

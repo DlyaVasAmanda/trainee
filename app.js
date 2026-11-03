@@ -10,7 +10,7 @@
 const GUEST_DB = 'workout-tracker';
 const DB_VERSION = 3; // v1: exercises, workouts; v2: + templates, meta; v3: + outbox
 const DATA_STORES = ['exercises', 'workouts', 'templates', 'meta'];
-const SYNCED_META = new Set(['plan', 'program']); // остальные ключи meta — локальные (seedV, lastPull, …)
+const SYNCED_META = new Set(['plan', 'program', 'profile']); // остальные ключи meta — локальные (seedV, lastPull, …)
 let db;
 
 const dbNameFor = user => user ? 'trainee-' + user.id : GUEST_DB;
@@ -140,7 +140,8 @@ const cleanScheme = x => vArr(x, 10).map(g => {
 }).filter(Boolean);
 function cleanProgram(x) {
   if (!isObj(x) || !isObj(x.goal)) return null;
-  const goal = { ex: vStr(x.goal.ex, 120), kg: vNum(x.goal.kg, 1, 500), gain: vNum(x.goal.gain, 0.01, 2), maxReps: vInt(x.goal.maxReps, 1, 20) || 10, date: vDate(x.goal.date) };
+  const goal = { ex: vStr(x.goal.ex, 120), kg: vNum(x.goal.kg, 1, 500), gain: vNum(x.goal.gain, 0.01, 2), maxReps: vInt(x.goal.maxReps, 1, 20) || 10,
+    metric: x.goal.metric === 'reps' ? 'reps' : 'e1rm', date: vDate(x.goal.date) };
   if (!goal.ex || (goal.kg == null && goal.gain == null) || !goal.date) return null;
   const sessions = vArr(x.sessions, 200).map(se => {
     if (!isObj(se) || !vDate(se.date)) return null;
@@ -154,7 +155,7 @@ function cleanProgram(x) {
   if (!sessions.length) return null;
   return {
     key: 'program', id: vStr(x.id, 80), title: vStr(x.title, 120) || 'Программа', goal, base1RM: vNum(x.base1RM, 1, 500) || goal.kg,
-    chartTitle: vStr(x.chartTitle, 120),
+    chartTitle: vStr(x.chartTitle, 120), days: [...new Set(vArr(x.days, 7).map(d => vInt(d, 0, 6)).filter(d => d != null))].sort(),
     plasma: vArr(x.plasma, 60).map(vDate).filter(Boolean),
     blocks: vArr(x.blocks, 12).map(b => isObj(b) && vDate(b.from) && vDate(b.to) ? { name: vStr(b.name, 60), from: b.from, to: b.to } : null).filter(Boolean),
     coachNote: isObj(x.coachNote) && vStr(x.coachNote.text, 1000) ? { date: vDate(x.coachNote.date), text: vStr(x.coachNote.text, 1000) } : null,
@@ -189,6 +190,10 @@ const CLEAN = {
   },
   meta(x) {
     if (isObj(x) && x.key === 'program') return cleanProgram(x);
+    if (isObj(x) && x.key === 'profile') {
+      const nick = vStr(x.nick, 24).replace(/[\u0000-\u001f\u007f<>]/g, '').trim();
+      return { key: 'profile', nick, bw: vNum(x.bw, 30, 250), board: x.board === true && nick.length >= 2, _u: vNum(x._u, 0, 9e15) || 0 };
+    }
     if (!isObj(x) || x.key !== 'plan') return null;
     const days = vArr(x.days, 7).map(vId); while (days.length < 7) days.push(null);
     return { key: 'plan', days, _u: vNum(x._u, 0, 9e15) || 0 };
@@ -202,6 +207,7 @@ async function reloadState() {
   S.templates = cleanAll('templates', await getAll('templates'));
   S.plan = CLEAN.meta(await getOne('meta', 'plan')) || { key: 'plan', days: Array(7).fill(null) };
   S.program = CLEAN.meta(await getOne('meta', 'program'));
+  S.profile = CLEAN.meta(await getOne('meta', 'profile')) || { key: 'profile', nick: '', bw: null, board: false };
   sortEx();
   S.templates.sort((a, b) => (a.created || 0) - (b.created || 0) || a.name.localeCompare(b.name, 'ru'));
 }
@@ -321,7 +327,14 @@ async function finishWorkout() {
   if (!w.entries.length) {
     if (!confirm('Нет ни одного подхода — тренировка не сохранится. Завершить?')) return;
     await dataDel('workouts', w.id); S.workouts = S.workouts.filter(x => x !== w);
-  } else { w.finished = true; w.end = Date.now(); await saveW(w); }
+  } else {
+    const before = xpStats(), gain = workoutXP(w);
+    w.finished = true; w.end = Date.now(); await saveW(w);
+    const total = Object.values(gain).reduce((a, b) => a + b, 0);
+    if (total) S.xpToast = { total, groups: Object.entries(gain).sort((a, b) => b[1] - a[1]),
+      ups: Object.keys(gain).filter(g => lvlOf((before.m[g] || 0) + gain[g]) > lvlOf(before.m[g] || 0)).map(g => [g, lvlOf((before.m[g] || 0) + gain[g])]) };
+    scheduleBoard();
+  }
   S.adding = false; S.selDay = null; render(true);
 }
 async function discardWorkout() {
@@ -451,25 +464,33 @@ function topSet(w, exName) {
   return best;
 }
 const e1rm = x => x.r === 1 ? x.w : x.w * (1 + x.r / 30);
+// Значение подхода для цели: расчётный максимум (кг) или повторы (для упражнений со своим весом)
+const setVal = (p, x) => p.goal.metric === 'reps' ? (x.r || null) : x.w && x.r && x.r <= p.goal.maxReps ? e1rm(x) : null;
+const goalUnit = p => p.goal.metric === 'reps' ? 'повт.' : 'кг';
+const roundGoal = (p, v) => p.goal.metric === 'reps' ? Math.round(v) : Math.round(v * 2) / 2;
 function currentMax(p) { // расчётный максимум за 5 недель по подходам до 10 повторов
   const ex = exByName(p.goal.ex); if (!ex) return null;
   const since = Date.now() - 35 * 864e5; let best = null;
   for (const w of finished()) if (w.start >= since) for (const e of w.entries) if (e.exId === ex.id)
-    for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps) { const v = e1rm(x); if (!best || v > best.v) best = { v, x, date: w.start }; }
+    for (const x of e.sets) { const v = setVal(p, x); if (v && (!best || v > best.v)) best = { v, x, date: w.start }; }
   return best;
 }
 // Старт: заданный в программе или лучший подход упражнения цели в первой тренировке программы (калибровка)
 function progBase(p) {
   if (p.base1RM) return p.base1RM;
   const ex = exByName(p.goal.ex); if (!ex) return null;
-  const from = fromKey(p.sessions[0].date).getTime();
-  const ws = finished().filter(w => w.start >= from && w.entries.some(e => e.exId === ex.id && e.sets.some(x => x.w && x.r))).sort((a, b) => a.start - b.start);
+  const from = fromKey([p.blocks[0]?.from, p.sessions[0].date].filter(Boolean).sort()[0]).getTime(); // с начала программы
+  const ws = finished().filter(w => w.start >= from && w.entries.some(e => e.exId === ex.id && e.sets.some(x => setVal(p, x)))).sort((a, b) => a.start - b.start);
   if (!ws.length) return null;
   let best = 0;
-  for (const e of ws[0].entries) if (e.exId === ex.id) for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps) best = Math.max(best, e1rm(x));
-  return best ? Math.round(best * 2) / 2 : null;
+  for (const e of ws[0].entries) if (e.exId === ex.id) for (const x of e.sets) best = Math.max(best, setVal(p, x) || 0);
+  return best ? roundGoal(p, best) : null;
 }
-const goalKg = p => { if (p.goal.kg != null) return p.goal.kg; const b = progBase(p); return b ? Math.round(b * (1 + p.goal.gain) / 2.5) * 2.5 : null; };
+const goalKg = p => {
+  if (p.goal.kg != null) return p.goal.kg;
+  const b = progBase(p); if (!b) return null;
+  return p.goal.metric === 'reps' ? Math.max(b + 1, Math.round(b * (1 + p.goal.gain))) : Math.round(b * (1 + p.goal.gain) / 2.5) * 2.5;
+};
 async function ensureExercise(it) {
   let ex = exByName(it.ex);
   if (!ex) {
@@ -487,22 +508,134 @@ async function startProgramSession(key) {
   S.workouts.push(w); await saveW(w); S.tab = 'today'; S.adding = false; render(true); window.scrollTo(0, 0);
 }
 const PROGRAMS = [
-  { id: 'bench-100-2026', title: 'Жим 100 кг к Новому году', plate: [['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]],
-    text: '9 недель, 3 блока, тест 27 декабря. Тренировки в Пн, Вт, Сб, Вс, сдачи плазмы по понедельникам учтены.' },
-  { id: 'glutes-2026', title: 'Ягодицы к Новому году', plate: [['glutes', 4], ['legs', 2], ['back', 1], ['shoulders', 1]],
-    text: '8 недель: калибровка, 2 блока, разгрузка и тест ягодичного моста 27 декабря. Те же дни: Сб, Вс, Пн, Вт, 3–4 тренировки в неделю.' },
+  { id: 'novice-fullbody', template: true, perWeek: 3, days: [0, 2, 4], title: 'Новичок: всё тело', plate: [['legs', 2], ['chest', 1], ['back', 2], ['shoulders', 1], ['abs', 1]],
+    text: '12 недель, 3 тренировки в неделю, всё тело за тренировку. Учимся технике базовых упражнений и стабильно прибавляем веса.' },
+  { id: 'mass-upper-lower', template: true, perWeek: 4, days: [0, 1, 3, 4], title: 'Масса: верх/низ', plate: [['chest', 2], ['back', 2], ['legs', 2], ['shoulders', 1], ['biceps', 1], ['triceps', 1]],
+    text: '12 недель, 4 тренировки: верх и низ по очереди. Каждая мышца дважды в неделю, 8–12 повторов, объём растёт от блока к блоку.' },
+  { id: 'strength-waves', template: true, perWeek: 4, days: [0, 1, 3, 4], title: 'Сила: присед, жим, тяга', plate: [['legs', 2], ['chest', 2], ['back', 2], ['shoulders', 1]],
+    text: '12 недель, 4 тренировки: присед, жим лёжа, становая, жим стоя. Волны 5–3–1 по RPE, разгрузка каждую 4-ю неделю, тест максимумов в конце.' },
+  { id: 'home-bodyweight', template: true, perWeek: 3, days: [0, 2, 4], title: 'Дома без железа', plate: [['chest', 2], ['legs', 2], ['back', 1], ['glutes', 1], ['abs', 1]],
+    text: '12 недель, 3 тренировки дома: нужны пол, стул и стол или турник. Прогрессия через более сложные варианты упражнений.' },
+  { id: 'bench-100-2026', personal: true, title: 'Жим 100 кг к Новому году', plate: [['chest', 3], ['triceps', 1], ['back', 2], ['legs', 1]],
+    text: 'Личная программа по датам: 9 недель, тест 27 декабря. Пн, Вт, Сб, Вс, сдачи плазмы учтены.' },
+  { id: 'glutes-2026', personal: true, title: 'Ягодицы к Новому году', plate: [['glutes', 4], ['legs', 2], ['back', 1], ['shoulders', 1]],
+    text: 'Личная программа по датам: калибровка, 2 блока, тест 27 декабря. Сб, Вс, Пн, Вт.' },
 ];
+// Шаблон → программа с датами: неделя 1 начинается в день подключения, дни недели выбирает человек
+function genProgram(tpl, days, start = startOfDay(Date.now())) {
+  if (!isObj(tpl) || !isObj(tpl.days) || !Array.isArray(tpl.weekPhases) || !Array.isArray(tpl.dayTypes) || !tpl.dayTypes.length) return null;
+  const weeks = vInt(tpl.weeks, 1, 52) || 12;
+  const mon = startOfDay(start); mon.setDate(mon.getDate() - dowOf(start));
+  const sessions = []; let i = 0;
+  for (const d = startOfDay(start); ; d.setDate(d.getDate() + 1)) {
+    const week = Math.floor(Math.round((d - mon) / 864e5) / 7) + 1;
+    if (week > weeks) break;
+    if (!days.includes(dowOf(d))) continue;
+    const phase = tpl.weekPhases[week - 1], type = String(tpl.dayTypes[i++ % tpl.dayTypes.length]);
+    const day = tpl.days[type], ph = isObj(day) && isObj(day.phases) ? day.phases[phase] : null; if (!isObj(ph)) continue;
+    sessions.push({ date: dk(d), type, title: ph.title || day.title, note: ph.note || (isObj(tpl.phaseNotes) ? tpl.phaseNotes[phase] : '') || '', items: ph.items });
+  }
+  if (!sessions.length) return null;
+  if (isObj(tpl.test)) Object.assign(sessions.at(-1), { type: tpl.test.type || 'T', title: tpl.test.title, note: tpl.test.note || '', items: tpl.test.items });
+  const at = n => { const x = new Date(mon); x.setDate(x.getDate() + n); return dk(x); };
+  const startK = dk(start);
+  return cleanProgram({
+    key: 'program', id: tpl.id, title: tpl.title, goal: { ...tpl.goal, date: sessions.at(-1).date }, plasma: [], days, chartTitle: tpl.chartTitle,
+    blocks: vArr(tpl.blocks, 12).filter(isObj).map(b => ({ name: b.name, from: [at((b.from - 1) * 7), startK].sort()[1], to: at(b.to * 7 - 1) })),
+    coachNote: tpl.coachNote ? { date: startK, text: tpl.coachNote } : null, rules: tpl.rules, sessions,
+  });
+}
 async function activateProgram(id) {
   const meta = PROGRAMS.find(x => x.id === id); if (!meta) return;
+  if (meta.template && (S.progSetup?.id !== id || S.progSetup.days.length !== meta.perWeek)) return;
   try {
     const res = await fetch(`programs/${meta.id}.json`, { cache: 'no-cache' });
-    const p = cleanProgram(await res.json()); if (!p) throw new Error('bad program');
+    const raw = await res.json();
+    const p = meta.template ? genProgram(raw, S.progSetup.days) : cleanProgram(raw); if (!p) throw new Error('bad program');
+    S.progSetup = null;
     await dataPut('meta', p); S.program = p; render(true);
   } catch { alert('Не удалось загрузить программу. Проверь интернет и попробуй ещё раз.'); }
 }
 async function deactivateProgram() {
   if (!confirm('Отключить программу? История тренировок сохранится, а «Сегодня» снова будет брать план недели.')) return;
   await dataDel('meta', 'program'); S.program = null; render();
+}
+
+/* ---------- Уровни мышц: опыт за рабочие подходы ---------- */
+const XP_MAIN = ['chest', 'back', 'legs', 'shoulders', 'biceps', 'triceps', 'abs'], XP_EXTRA = ['glutes', 'cardio'];
+const XP_CAP = 15; // подходов на группу за тренировку, сверх этого опыт не начисляется
+const setXP = x => x.min != null || x.km != null ? Math.min(30, Math.round(x.min || 0)) : x.rpe == null ? 10 : x.rpe >= 8 ? 12 : x.rpe >= 6.5 ? 10 : 7;
+function workoutXP(w) {
+  const m = {}, cnt = {};
+  for (const e of w.entries) {
+    const g = exById(e.exId)?.group; if (!g || g === 'other') continue;
+    for (const x of e.sets) { cnt[g] = (cnt[g] || 0) + 1; if (cnt[g] <= XP_CAP) m[g] = (m[g] || 0) + setXP(x); }
+  }
+  return m;
+}
+function xpStats(since = 0, list = finished()) {
+  const m = {}; let total = 0;
+  for (const w of list) if (w.start >= since) for (const [g, v] of Object.entries(workoutXP(w))) { m[g] = (m[g] || 0) + v; total += v; }
+  return { m, total };
+}
+// Уровни с 1. Уровень L начинается с k·(L−1)·L опыта: первые растут быстро, дальше медленнее
+const lvlOf = (xp, k = 50) => Math.floor((Math.sqrt(1 + 4 * xp / k) - 1) / 2) + 1;
+const lvlXP = (L, k = 50) => k * (L - 1) * L;
+const RANKS = [[1, 'Новичок'], [4, 'Любитель'], [7, 'Атлет'], [11, 'Профи'], [16, 'Мастер'], [21, 'Легенда']];
+const rankOf = L => RANKS.filter(r => L >= r[0]).at(-1)[1];
+const TOTAL_K = 200;
+
+/* ---------- Рейтинг ---------- */
+const BIG_LIFTS = ['Жим лёжа', 'Приседания со штангой', 'Становая тяга', 'Жим стоя'];
+function strengthScore() { // сумма расчётных максимумов в базовых упражнениях за 90 дней / вес тела × 100
+  if (!S.profile?.bw) return null;
+  const since = Date.now() - 90 * 864e5; let sum = 0;
+  for (const n of BIG_LIFTS) {
+    const ex = exByName(n); if (!ex) continue; let best = 0;
+    for (const w of finished()) if (w.start >= since) for (const e of w.entries) if (e.exId === ex.id)
+      for (const x of e.sets) if (x.w && x.r && x.r <= 10) best = Math.max(best, e1rm(x));
+    sum += best;
+  }
+  return Math.min(2000, Math.round(sum / S.profile.bw * 100));
+}
+let boardTimer;
+const scheduleBoard = () => { clearTimeout(boardTimer); boardTimer = setTimeout(publishBoard, 1500); };
+async function publishBoard() {
+  if (!Cloud || !CLOUD.user || !S.profile?.board || !navigator.onLine) return false;
+  const all = xpStats(), wk = xpStats(weekStart().getTime());
+  try {
+    await Cloud.boardSave({ user_id: CLOUD.user.id, nick: S.profile.nick, week_start: dk(weekStart()), week_xp: Math.min(20000, wk.total),
+      total_xp: Math.min(1e7, all.total), level: Math.min(1000, lvlOf(all.total, TOTAL_K)), strength: strengthScore() });
+    S.boardErr = null; return true;
+  } catch (e) {
+    const t = String(e?.message || '') + ' ' + String(e?.code || '');
+    S.boardErr = /duplicate|unique|23505/i.test(t) ? 'Этот ник уже занят, выбери другой.'
+      : /PGRST20[25]|42P01|42883|leaderboard|get_leaderboard/i.test(t) ? 'Рейтинг ещё не включён на сервере. Нужно один раз выполнить supabase/leaderboard.sql в Supabase.' : humanError(e);
+    return false;
+  }
+}
+async function loadBoard(kind) {
+  if (!Cloud || !CLOUD.user || S.board?.loading) return;
+  S.board = { kind, rows: S.board?.kind === kind ? S.board.rows : null, loading: true };
+  try { S.board = { kind, rows: (await Cloud.board(kind)) || [], loading: false }; }
+  catch (e) { S.board = { kind, rows: [], loading: false, err: /PGRST20[25]|42883|get_leaderboard/i.test(String(e?.message || '') + String(e?.code || '')) ? 'Рейтинг ещё не включён на сервере.' : humanError(e) }; }
+  if (S.tab === 'progress') softRender();
+}
+async function boardJoin() {
+  const nick = (document.getElementById('bNick')?.value || '').replace(/[\u0000-\u001f\u007f<>]/g, '').trim();
+  const bwRaw = document.getElementById('bBw')?.value || '';
+  const bw = bwRaw.trim() ? vNum(num(bwRaw), 30, 250) : null;
+  if (nick.length < 2 || nick.length > 24) { S.boardErr = 'Ник: от 2 до 24 символов.'; return render(); }
+  if (bwRaw.trim() && bw == null) { S.boardErr = 'Вес тела: число от 30 до 250 кг.'; return render(); }
+  const prev = S.profile;
+  S.profile = { key: 'profile', nick, bw, board: true };
+  if (!(await publishBoard())) { S.profile = prev; return render(); }
+  await dataPut('meta', S.profile); S.boardEdit = false; S.board = null; render();
+}
+async function boardLeave() {
+  if (!confirm('Убрать тебя из рейтинга? Тренировки и уровни останутся.')) return;
+  try { await Cloud.boardDelete(CLOUD.user.id); } catch (e) { S.boardErr = humanError(e); return render(); }
+  S.profile = { ...S.profile, board: false }; await dataPut('meta', S.profile); S.boardEdit = false; S.board = null; render();
 }
 
 /* =========================================================
@@ -564,8 +697,12 @@ function viewToday() {
   if (dw.length) body += dw.map(x => `<div class="done-note"><span class="dot" style="--c:var(--g-shoulders)"></span>
       Выполнено: ${esc(x.title || 'тренировка')}, ${setCount(x)} ${plural(setCount(x), 'подход', 'подхода', 'подходов')}, ${mins(x)} мин</div>`).join('');
 
+  const xt = S.xpToast;
+  const xpNote = xt ? `<section class="xp-toast" role="status"><div class="xp-top"><b class="num">+${xt.total} XP</b><button class="icon-btn" data-a="xpClose" aria-label="Закрыть">${ICON.x}</button></div>
+      <div class="chips">${xt.groups.map(([g, v]) => `<span class="chip"><span class="dot" style="--c:${gc(g)}"></span>${GROUPS[g]} +${v}</span>`).join('')}</div>
+      ${xt.ups.length ? `<p style="margin-top:8px"><b>Новый уровень:</b> ${xt.ups.map(([g, l]) => `${GROUPS[g]} ${l}`).join(', ')}</p>` : ''}</section>` : '';
   return `<header class="head"><div><h1>${DOW_FULL[today]}</h1><div class="sub">${longDate(Date.now())}</div></div>${avatarBtn()}</header>
-    ${mergeOffer()}
+    ${xpNote}${mergeOffer()}
     ${weekStrip(sel)}
     <section class="sheet">${body}</section>
     <button class="btn ghost block" style="margin-top:8px" data-a="start">Свободная тренировка</button>`;
@@ -590,7 +727,7 @@ function programHero(ps, pl, date, label, spin, isToday) {
 function bestE1(w, p) { // лучший расчётный максимум упражнения цели в тренировке
   const ex = exByName(p.goal.ex); if (!w || !ex) return null;
   let best = null;
-  for (const e of w.entries) if (e.exId === ex.id) for (const x of e.sets) if (x.w && x.r && x.r <= p.goal.maxReps && (!best || e1rm(x) > best.v)) best = { v: e1rm(x), x };
+  for (const e of w.entries) if (e.exId === ex.id) for (const x of e.sets) { const v = setVal(p, x); if (v && (!best || v > best.v)) best = { v, x }; }
   return best;
 }
 function e1Chart(p, gk, base) {
@@ -607,11 +744,11 @@ function e1Chart(p, gk, base) {
   const last = facts.at(-1);
   return `<svg class="goal-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(p.chartTitle || 'Расчётный максимум')}: план и факт">
     <line x1="${l}" x2="${r}" y1="${Y(gk)}" y2="${Y(gk)}" stroke="var(--mute)" stroke-dasharray="5 4" stroke-width="1"/>
-    <text x="${l}" y="${Y(gk) - 5}" class="lbl">цель ${fmtN(gk)} кг</text>
+    <text x="${l}" y="${Y(gk) - 5}" class="lbl">цель ${fmtN(gk)} ${goalUnit(p)}</text>
     ${base ? `<path d="M${X(d0).toFixed(1)},${Y(base).toFixed(1)} L${X(d1).toFixed(1)},${Y(gk).toFixed(1)}" fill="none" stroke="var(--mute)" stroke-width="1.5" stroke-dasharray="2 4" opacity=".8"/>` : ''}
     <path d="${path}" fill="none" stroke="var(--g-back)" stroke-width="2.5" stroke-linejoin="round"/>
-    ${facts.map(o => `<circle cx="${X(o.se.date)}" cy="${Y(o.b.v)}" r="4.5" fill="var(--g-back)"><title>${shortKey(o.se.date)}: ${fmtN(o.b.x.w)} × ${o.b.x.r} ≈ ${fmtN(Math.round(o.b.v * 2) / 2)} кг</title></circle>`).join('')}
-    <text x="${Math.min(X(last.se.date), r - 40)}" y="${Y(last.b.v) - 9}" class="lbl strong">≈${fmtN(Math.round(last.b.v * 2) / 2)}</text>
+    ${facts.map(o => `<circle cx="${X(o.se.date)}" cy="${Y(o.b.v)}" r="4.5" fill="var(--g-back)"><title>${shortKey(o.se.date)}: ${p.goal.metric === 'reps' ? `${o.b.x.r} повт.` : `${fmtN(o.b.x.w)} × ${o.b.x.r} ≈ ${fmtN(roundGoal(p, o.b.v))} кг`}</title></circle>`).join('')}
+    <text x="${Math.min(X(last.se.date), r - 40)}" y="${Y(last.b.v) - 9}" class="lbl strong">${p.goal.metric === 'reps' ? '' : '≈'}${fmtN(roundGoal(p, last.b.v))}</text>
     <text x="${l}" y="${H - 18}" class="lbl">${shortKey(d0)}</text><text x="${r}" y="${H - 18}" class="lbl" text-anchor="end">${shortKey(d1)}</text>
     <circle cx="${l + 4}" cy="${H - 4}" r="3.5" fill="var(--g-back)"/><text x="${l + 12}" y="${H - 1}" class="lbl">факт</text>
     <line x1="${l + 52}" x2="${l + 70}" y1="${H - 4}" y2="${H - 4}" stroke="var(--mute)" stroke-dasharray="2 4" stroke-width="1.5"/><text x="${l + 76}" y="${H - 1}" class="lbl">план</text>
@@ -645,10 +782,10 @@ function goalChart(p, gk, b0) {
 }
 function viewGoal() {
   const p = S.program;
-  if (!p) return `<header class="head"><div><h1>Цель</h1><div class="sub">Программа тренера с весами на каждую тренировку</div></div>${avatarBtn()}</header>
-    ${PROGRAMS.map((x, i) => `<section class="sheet" ${i ? 'style="margin-top:12px"' : ''}><div class="hero">${plate(x.plate, 'big' + (i ? '' : ' spin'))}<div>
-      <h2>${esc(x.title)}</h2><p class="mute small">${esc(x.text)}</p></div></div>
-      <button class="btn ${i ? '' : 'primary '}big block" style="margin-top:18px" data-a="progOn" data-id="${x.id}">Подключить</button></section>`).join('')}`;
+  if (!p) return `<header class="head"><div><h1>Цель</h1><div class="sub">Выбери программу: тренировки с подходами и весами на каждый день</div></div>${avatarBtn()}</header>
+    ${PROGRAMS.filter(x => x.template).map(progCard).join('')}
+    <div class="section"><h2>Личные программы</h2><p class="mute small" style="margin:-4px 0 10px">Составлены под конкретного человека и привязаны к датам.</p></div>
+    ${PROGRAMS.filter(x => x.personal).map(progCard).join('')}`;
   const today = dk(Date.now());
   const daysLeft = Math.round((fromKey(p.goal.date) - startOfDay(Date.now())) / 864e5);
   const base = progBase(p), gk = goalKg(p);
@@ -657,19 +794,19 @@ function viewGoal() {
   if (gk == null) hero = `<div class="goal-top"><div><div class="goal-kg num">+${fmtN(Math.round(p.goal.gain * 100))}<small> %</small></div>
       <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
       <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
-    <p class="mute small" style="margin-top:10px">Цель в килограммах посчитается после первой тренировки с упражнением «${esc(p.goal.ex)}»: расчётный максимум из калибровки плюс ${fmtN(Math.round(p.goal.gain * 100))}%.</p>`;
+    <p class="mute small" style="margin-top:10px">Цель посчитается после первой тренировки с упражнением «${esc(p.goal.ex)}»: ${p.goal.metric === 'reps' ? 'лучший подход' : 'расчётный максимум'} из калибровки плюс ${fmtN(Math.round(p.goal.gain * 100))}%.</p>`;
   else {
     const b0 = base ?? est ?? gk * 0.9, e0 = est ?? b0;
     // Шкала от ~85% цели до цели: видно и старт, и текущую оценку, даже если она пока ниже старта
     const lo = Math.floor(Math.min(b0, e0, gk * 0.9) * 0.95 / 5) * 5, span = (gk - lo) || 1;
     const pct = Math.max(0.02, Math.min(1, (e0 - lo) / span)), basePct = Math.max(0, Math.min(1, (b0 - lo) / span));
-    hero = `<div class="goal-top"><div><div class="goal-kg num">${fmtN(gk)}<small> кг</small></div>
+    hero = `<div class="goal-top"><div><div class="goal-kg num">${fmtN(gk)}<small> ${goalUnit(p)}</small></div>
         <div class="mute small">${esc(p.goal.ex)}, тест ${longDate(fromKey(p.goal.date))}</div></div>
         <div class="days"><span class="num">${Math.max(0, daysLeft)}</span><span class="mute small">${plural(Math.max(0, daysLeft), 'день', 'дня', 'дней')}</span></div></div>
-      <div class="track" role="img" aria-label="Расчётный максимум ${fmtN(Math.round(e0 * 2) / 2)} кг из ${fmtN(gk)}, старт ${fmtN(b0)}"><div class="fill" style="width:${(pct * 100).toFixed(1)}%"></div><div class="tick" style="left:${(basePct * 100).toFixed(1)}%"></div></div>
-      <div class="track-legend"><span>${fmtN(lo)}</span><b>сейчас ≈ ${fmtN(Math.round(e0 * 2) / 2)} кг</b><span>${fmtN(gk)}</span></div>
-      <p class="mute small">Метка на шкале — старт программы, ${fmtN(b0)} кг${p.goal.kg == null ? `. Цель: старт + ${fmtN(Math.round(p.goal.gain * 100))}%` : ''}.</p>
-      <p class="mute small" style="margin-top:6px">${best ? `Расчёт по подходу ${fmtSet('strength', best.x)} от ${shortKey(dk(best.date))} (формула Эпли).` : 'Пока это стартовая оценка. Она обновится после первых тяжёлых подходов.'}</p>`;
+      <div class="track" role="img" aria-label="${p.goal.metric === 'reps' ? 'Лучший подход' : 'Расчётный максимум'} ${fmtN(roundGoal(p, e0))} ${goalUnit(p)} из ${fmtN(gk)}, старт ${fmtN(b0)}"><div class="fill" style="width:${(pct * 100).toFixed(1)}%"></div><div class="tick" style="left:${(basePct * 100).toFixed(1)}%"></div></div>
+      <div class="track-legend"><span>${fmtN(lo)}</span><b>сейчас ${p.goal.metric === 'reps' ? '' : '≈ '}${fmtN(roundGoal(p, e0))} ${goalUnit(p)}</b><span>${fmtN(gk)}</span></div>
+      <p class="mute small">Метка на шкале — старт программы, ${fmtN(b0)} ${goalUnit(p)}${p.goal.kg == null ? `. Цель: старт + ${fmtN(Math.round(p.goal.gain * 100))}%` : ''}.</p>
+      <p class="mute small" style="margin-top:6px">${best ? (p.goal.metric === 'reps' ? `Лучший подход за 5 недель: ${best.x.r} повт. от ${shortKey(dk(best.date))}.` : `Расчёт по подходу ${fmtSet('strength', best.x)} от ${shortKey(dk(best.date))} (формула Эпли).`) : 'Пока это стартовая оценка. Она обновится после первых тяжёлых подходов.'}</p>`;
   }
   const chart = gk == null ? '' : goalChart(p, gk, base);
   const next = p.sessions.find(se => se.date >= today && !sessionWorkout(se));
@@ -692,6 +829,16 @@ function viewGoal() {
       <div class="list">${list.map(x => schedRow(x, today, p)).join('')}</div>` : ''; }).join('')}</div>
     ${p.rules.length ? `<details class="sheet rules"><summary>Правила программы</summary><ul>${p.rules.map(r => `<li>${esc(r)}</li>`).join('')}</ul></details>` : ''}
     <button class="btn ghost danger block" style="margin-top:14px" data-a="progOff">Отключить программу</button>`;
+}
+function progCard(x) {
+  const set = S.progSetup?.id === x.id ? S.progSetup : null, n = set ? set.days.length : 0;
+  const setup = set ? `<div class="day-pick" role="group" aria-label="Дни тренировок">${DOW.map((d, i) => `<button class="dp ${set.days.includes(i) ? 'on' : ''}" data-a="progDay" data-i="${i}" aria-pressed="${set.days.includes(i)}">${d}</button>`).join('')}</div>
+      <p class="mute small" style="margin-top:8px">${n === x.perWeek ? `Неделя 1 начнётся сегодня, ${longDate(Date.now())}. Программа 12 недель.` : `Выбери ${x.perWeek} ${plural(x.perWeek, 'день', 'дня', 'дней')} в неделю (сейчас ${n}).`}</p>
+      <div class="stack" style="margin-top:12px"><button class="btn primary big block" data-a="progOn" data-id="${x.id}" ${n === x.perWeek ? '' : 'disabled'}>Начать программу</button>
+      <button class="btn ghost block" data-a="progPick" data-id="">Отмена</button></div>` : '';
+  return `<section class="sheet prog-card" style="margin-bottom:12px"><div class="hero">${plate(x.plate, 'big')}<div>
+      <h2>${esc(x.title)}</h2><p class="mute small">${esc(x.text)}</p></div></div>
+      ${set ? setup : `<button class="btn big block" style="margin-top:18px" data-a="${x.template ? 'progPick' : 'progOn'}" data-id="${x.id}">${x.template ? 'Выбрать дни и начать' : 'Подключить'}</button>`}</section>`;
 }
 function schedRow(x, today, p) {
   const d = fromKey(x.k), when = `<span class="sd"><b>${DOW[dowOf(d)]}</b> ${d.getDate()}.${String(d.getMonth() + 1).padStart(2, '0')}</span>`;
@@ -853,6 +1000,43 @@ function chart(pts, color) {
     <text x="${X(pts.length - 1)}" y="${Y(pts.at(-1).y) - 12}" text-anchor="end" style="fill:var(--ink);font-weight:600">${fmtN(pts.at(-1).y)}</text>
     <text x="${px}" y="${H - 4}">${shortDate(pts[0].t)}</text><text x="${W - px}" y="${H - 4}" text-anchor="end">${shortDate(pts.at(-1).t)}</text></svg>`;
 }
+function levelsHTML() {
+  const { m, total } = xpStats(), L = lvlOf(total, TOTAL_K), wk = xpStats(weekStart().getTime()).total;
+  const pct = (xp, l, k) => Math.max(2, Math.min(100, (xp - lvlXP(l, k)) / (lvlXP(l + 1, k) - lvlXP(l, k)) * 100)).toFixed(1);
+  const groups = XP_MAIN.concat(XP_EXTRA.filter(g => m[g]));
+  return `<section class="sheet lv-hero"><div class="lv-top"><div><div class="mute small">Общий уровень</div><div class="lv-big num">${L}</div><div class="mute small">${rankOf(L)}</div></div>
+      <div style="text-align:right"><div class="mute small">За эту неделю</div><div class="num" style="font-size:28px">+${wk}</div><div class="mute small">XP</div></div></div>
+      <div class="lv-bar big"><i style="width:${pct(total, L, TOTAL_K)}%"></i></div>
+      <div class="mute small" style="margin-top:6px">${total - lvlXP(L, TOTAL_K)} / ${lvlXP(L + 1, TOTAL_K) - lvlXP(L, TOTAL_K)} XP до уровня ${L + 1}</div></section>
+    <div class="lv-grid">${groups.map(g => { const xp = m[g] || 0, l = lvlOf(xp);
+      return `<div class="lv" style="--c:${gc(g)}"><span class="lv-n num">${l}</span><div class="lv-b"><b class="lv-name">${GROUPS[g]}</b>
+        <div class="lv-bar"><i style="width:${pct(xp, l, 50)}%"></i></div><div class="mute small lv-sub">${rankOf(l)} · ${xp - lvlXP(l)}/${lvlXP(l + 1) - lvlXP(l)}</div></div></div>`; }).join('')}</div>
+    <p class="mute small" style="margin:8px 2px 0">Опыт за рабочие подходы: 10 XP, на RPE 8+ — 12. В зачёт идут до ${XP_CAP} подходов на группу за тренировку.</p>`;
+}
+function boardHTML() {
+  if (!Cloud) return '';
+  const kind = S.boardKind || 'week', pf = S.profile || {};
+  const seg = `<div class="seg" role="tablist">${[['week', 'Неделя'], ['strength', 'Сила']].map(([k, l]) => `<button role="tab" aria-selected="${kind === k}" class="${kind === k ? 'on' : ''}" data-a="boardKind" data-id="${k}">${l}</button>`).join('')}</div>`;
+  const head = `<section class="sheet" style="margin-top:12px"><div class="row-between"><h3>Рейтинг</h3>${CLOUD.user && pf.board && !S.boardEdit ? seg : ''}</div>`;
+  const err = S.boardErr ? `<p class="msg error" style="margin-top:10px">${esc(S.boardErr)}</p>` : '';
+  if (!CLOUD.user) return head + `<p class="mute small" style="margin-top:6px">Войди в аккаунт, чтобы соревноваться с друзьями.</p></section>`;
+  if (!pf.board || S.boardEdit) return head + `<p class="mute small" style="margin-top:6px">В рейтинге видны только ник, уровень и очки. Тренировки и email остаются закрытыми.</p>
+      <div class="stack" style="margin-top:12px"><input id="bNick" maxlength="24" autocomplete="nickname" placeholder="Ник" aria-label="Ник" value="${esc(pf.nick || '')}">
+      <input id="bBw" inputmode="decimal" placeholder="Вес тела, кг (для рейтинга силы)" aria-label="Вес тела, кг" value="${pf.bw ?? ''}">
+      <button class="btn primary block" data-a="boardJoin">${pf.board ? 'Сохранить' : 'Участвовать'}</button>
+      ${pf.board ? '<button class="btn ghost block" data-a="boardEdit">Отмена</button><button class="btn ghost danger block" data-a="boardLeave">Выйти из рейтинга</button>' : ''}</div>${err}</section>`;
+  const b = S.board?.kind === kind ? S.board : null;
+  if (!b && navigator.onLine) setTimeout(() => loadBoard(kind), 0);
+  const rows = b?.rows || [];
+  const list = !b || (b.loading && !rows.length) ? '<p class="mute small" style="margin-top:10px">Загружаю…</p>'
+    : b.err ? `<p class="msg error" style="margin-top:10px">${esc(b.err)}</p>`
+    : rows.length ? `<ol class="board">${rows.map(r => `<li class="${r.me ? 'me' : ''}"><span class="rk num">${r.rank}</span><span class="nm">${esc(r.nick)} <span class="mute small">ур. ${r.level}</span></span><b class="num">${r.score}</b></li>`).join('')}</ol>`
+    : '<p class="mute small" style="margin-top:10px">Пока пусто. Заверши тренировку, и ты появишься в списке.</p>';
+  const how = kind === 'week' ? 'Опыт за эту неделю (с понедельника). Обнуляется каждую неделю.'
+    : `Сумма расчётных максимумов в жиме лёжа, приседе, становой и жиме стоя за 90 дней, делённая на вес тела, ×100.${pf.bw ? '' : ' Укажи вес тела в настройках, чтобы попасть в этот рейтинг.'}`;
+  return head + list + `<p class="mute small" style="margin-top:10px">${how}</p>${err}
+    <button class="btn ghost sm" style="margin-top:6px" data-a="boardEdit">Ник и вес тела</button></section>`;
+}
 function viewProgress() {
   const since = Date.now() - 7 * 864e5;
   const counts = new Map();
@@ -866,7 +1050,9 @@ function viewProgress() {
   const ex = exById(S.progressEx);
   const unit = !ex ? '' : ex.type === 'strength' ? 'Оценка 1ПМ по формуле Эпли, кг' : ex.type === 'bodyweight' ? 'Максимум повторов за подход' : 'Километров за тренировку';
   return `<header class="head"><h1>Прогресс</h1></header>
-    <section class="sheet"><h3>Подходы по группам за 7 дней</h3>
+    ${levelsHTML()}
+    ${boardHTML()}
+    <section class="sheet" style="margin-top:12px"><h3>Подходы по группам за 7 дней</h3>
       <div style="margin-top:10px">${bars.length ? bars.map(([g, n]) => `<div class="bar-row"><span>${GROUPS[g]}</span>
         <div class="bar" style="--c:${gc(g)};width:${(n / maxC * 100).toFixed(1)}%"></div><span class="num" style="font-size:17px">${n}</span></div>`).join('')
         : '<p class="mute small">За последние 7 дней тренировок не было.</p>'}</div></section>
@@ -985,6 +1171,7 @@ async function pullChanges() {
 
 let syncTimer = null, syncAgain = false;
 function scheduleSync(ms = 1500) { clearTimeout(syncTimer); syncTimer = setTimeout(sync, ms); }
+let boardPublished = false;
 async function sync() {
   if (!Cloud || !CLOUD.user || !db) return;
   if (CLOUD.syncing) { syncAgain = true; return; }
@@ -1000,6 +1187,7 @@ async function sync() {
     if (db !== forDb) return; // пользователь сменился во время синхронизации
     CLOUD.error = null; CLOUD.lastSync = Date.now(); LS.set(LS_LASTSYNC + ':' + forUser, CLOUD.lastSync);
     if (changed) { await reloadState(); softRender(); }
+    if (changed || !boardPublished) { boardPublished = true; scheduleBoard(); }
   } catch (e) {
     CLOUD.error = humanError(e);
     if (/JWT|401|session/i.test(String(e && (e.message || e.code)))) CLOUD.needAuth = true;
@@ -1018,6 +1206,7 @@ document.addEventListener('focusout', () => setTimeout(() => { if (S.pendingRend
 
 /* --- Вход / выход / смена пользователя --- */
 async function switchUser(user) {
+  boardPublished = false; S.board = null; S.boardEdit = false; S.boardErr = null;
   const old = db; db = null; if (old) old.close(); // пока база не открыта, sync() ничего не делает
   CLOUD.user = user ? { id: user.id, email: user.email } : null;
   CLOUD.error = null; CLOUD.needAuth = false; CLOUD.pending = 0;
@@ -1204,7 +1393,7 @@ function render(spin = false) {
 
 document.addEventListener('click', ev => {
   const tab = ev.target.closest('[data-tab]');
-  if (tab) { S.tab = tab.dataset.tab; S.authMsg = null; render(S.tab === 'today'); window.scrollTo(0, 0); return; }
+  if (tab) { S.tab = tab.dataset.tab; S.authMsg = null; S.xpToast = null; if (S.tab === 'progress') S.board = null; render(S.tab === 'today'); window.scrollTo(0, 0); return; }
   const day = ev.target.closest('[data-day]');
   if (day) { S.selDay = +day.dataset.day; render(true); return; }
   const b = ev.target.closest('[data-a]'); if (!b) return;
@@ -1242,6 +1431,13 @@ document.addEventListener('click', ev => {
     reauthCancel: () => { S.reauth = false; render(); },
     merge: mergeGuest,
     progOn: () => activateProgram(id),
+    xpClose: () => { S.xpToast = null; render(); },
+    boardKind: () => { S.boardKind = id; render(); },
+    boardJoin,
+    boardLeave,
+    boardEdit: () => { S.boardEdit = !S.boardEdit; S.boardErr = null; render(); },
+    progPick: () => { const m = PROGRAMS.find(x => x.id === id); S.progSetup = m ? { id, days: [...m.days] } : null; render(); },
+    progDay: () => { if (!S.progSetup) return; const d = S.progSetup.days; S.progSetup.days = d.includes(i) ? d.filter(x => x !== i) : [...d, i].sort(); render(); },
     progOff: deactivateProgram,
     progStart: () => startProgramSession(id),
     progOpen: () => { S.openSession = S.openSession === id ? null : id; render(); },

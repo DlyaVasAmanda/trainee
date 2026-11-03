@@ -1,0 +1,772 @@
+{
+ "kind": "template",
+ "id": "home-bodyweight",
+ "title": "Дома без железа",
+ "weeks": 12,
+ "perWeek": 3,
+ "defaultDays": [
+  0,
+  2,
+  4
+ ],
+ "dayTypes": [
+  "A",
+  "B"
+ ],
+ "text": "12 недель, 3 тренировки дома: нужны пол, стул и стол или турник. Прогрессия через более сложные варианты упражнений.",
+ "plate": [
+  [
+   "chest",
+   2
+  ],
+  [
+   "legs",
+   2
+  ],
+  [
+   "back",
+   1
+  ],
+  [
+   "glutes",
+   1
+  ],
+  [
+   "abs",
+   1
+  ]
+ ],
+ "weekPhases": [
+  "cal",
+  "b1",
+  "b1",
+  "b1",
+  "b2",
+  "b2",
+  "b2",
+  "b2",
+  "b3",
+  "b3",
+  "b3",
+  "dl"
+ ],
+ "blocks": [
+  {
+   "name": "Калибровка",
+   "to": 1,
+   "from": 1
+  },
+  {
+   "name": "Блок 1: основа",
+   "to": 4,
+   "from": 2
+  },
+  {
+   "name": "Блок 2: объём",
+   "to": 8,
+   "from": 5
+  },
+  {
+   "name": "Блок 3: сложные варианты",
+   "to": 11,
+   "from": 9
+  },
+  {
+   "name": "Разгрузка и тест",
+   "to": 12,
+   "from": 12
+  }
+ ],
+ "phaseNotes": {
+  "cal": "Проверяем уровень: делай столько повторов, сколько получается с RPE 7. Если отжиманий меньше 5 — делай от колен.",
+  "b1": "Когда во всех подходах выходит верх диапазона, добавляй по 1–2 повтора.",
+  "b2": "Больше подходов и более сложные варианты.",
+  "b3": "Самые сложные варианты. Если не получается нижняя граница повторов, вернись к варианту из блока 2.",
+  "dl": "Разгрузка перед тестом."
+ },
+ "days": {
+  "A": {
+   "title": "Отжимания и ноги",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Отжимания",
+       "group": "chest",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Приседания",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Австралийские подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост",
+       "group": "glutes",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Планка",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 30,
+         "note": "секунды, RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Отжимания",
+       "group": "chest",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "8–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Приседания",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Австралийские подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "8–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост",
+       "group": "glutes",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Планка",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 30,
+         "note": "секунды"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Отжимания",
+       "group": "chest",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 20,
+         "note": "12–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Австралийские подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "10–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост на одной ноге",
+       "group": "glutes",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Планка",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 45,
+         "note": "секунды"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Отжимания с ногами на возвышении",
+       "group": "chest",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "8–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 8,
+         "note": "3–8, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост на одной ноге",
+       "group": "glutes",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Боковая планка",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 30,
+         "note": "секунды"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Отжимания с ногами на возвышении",
+       "group": "chest",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 3,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост на одной ноге",
+       "group": "glutes",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Боковая планка",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 30,
+         "note": "секунды, разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "B": {
+   "title": "Плечи и задняя цепь",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Пике-отжимания",
+       "group": "shoulders",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Выпады назад",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Обратные отжимания от скамьи",
+       "group": "triceps",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Супермен",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Пресс",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Пике-отжимания",
+       "group": "shoulders",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "6–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Выпады назад",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Обратные отжимания от скамьи",
+       "group": "triceps",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "10–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Супермен",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Пресс",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Пике-отжимания",
+       "group": "shoulders",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 12,
+         "note": "8–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Зашагивания на стул",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Обратные отжимания от скамьи",
+       "group": "triceps",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "12–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Супермен",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног лёжа",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Пике-отжимания с ногами на возвышении",
+       "group": "shoulders",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 10,
+         "note": "6–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Приседания на одной ноге к стулу",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "5–8, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Отжимания узкие",
+       "group": "triceps",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "8–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Супермен",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног лёжа",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 20,
+         "note": "15–20, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Пике-отжимания с ногами на возвышении",
+       "group": "shoulders",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 6,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Приседания на одной ноге к стулу",
+       "group": "legs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 5,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Отжимания узкие",
+       "group": "triceps",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Супермен",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 15,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног лёжа",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 15,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "test": {
+  "type": "T",
+  "title": "Тест: отжимания",
+  "note": "Разминка: 2 подхода по 5 отжиманий. Отдых 3 минуты, затем один подход на максимум повторов с чистой техникой.",
+  "items": [
+   {
+    "ex": "Отжимания",
+    "group": "chest",
+    "type": "bodyweight",
+    "scheme": [
+     {
+      "n": 1,
+      "reps": 30,
+      "note": "максимум повторов"
+     }
+    ]
+   }
+  ]
+ },
+ "goal": {
+  "ex": "Отжимания",
+  "gain": 0.5,
+  "metric": "reps"
+ },
+ "chartTitle": "Отжимания: лучший подход",
+ "rules": [
+  "RPE 7–8 значит 2–3 повтора в запасе. Чистая техника важнее количества.",
+  "Прогрессия: верх диапазона во всех подходах — в следующий раз +1–2 повтора или более сложный вариант.",
+  "Австралийские подтягивания: лёжа под крепким столом или низкой перекладиной, тянем грудь к краю. Чем ниже ноги, тем сложнее.",
+  "Если подтягиваний меньше 3, делай негативы: запрыгнул и опускайся 3–5 секунд.",
+  "Пропущенную тренировку не догоняем, идём дальше по расписанию."
+ ],
+ "coachNote": "Первая неделя — проверка уровня. Цель: +50% к лучшему подходу отжиманий из первой тренировки."
+}

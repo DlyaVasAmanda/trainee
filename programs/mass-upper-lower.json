@@ -1,0 +1,1551 @@
+{
+ "kind": "template",
+ "id": "mass-upper-lower",
+ "title": "Масса: верх/низ",
+ "weeks": 12,
+ "perWeek": 4,
+ "defaultDays": [
+  0,
+  1,
+  3,
+  4
+ ],
+ "dayTypes": [
+  "U1",
+  "L1",
+  "U2",
+  "L2"
+ ],
+ "text": "12 недель, 4 тренировки: верх и низ по очереди. Каждая мышца дважды в неделю, 8–12 повторов, объём растёт от блока к блоку.",
+ "plate": [
+  [
+   "chest",
+   2
+  ],
+  [
+   "back",
+   2
+  ],
+  [
+   "legs",
+   2
+  ],
+  [
+   "shoulders",
+   1
+  ],
+  [
+   "biceps",
+   1
+  ],
+  [
+   "triceps",
+   1
+  ]
+ ],
+ "weekPhases": [
+  "cal",
+  "b1",
+  "b1",
+  "b1",
+  "b1",
+  "b2",
+  "b2",
+  "b2",
+  "b2",
+  "b3",
+  "b3",
+  "dl"
+ ],
+ "blocks": [
+  {
+   "name": "Калибровка",
+   "to": 1,
+   "from": 1
+  },
+  {
+   "name": "Блок 1: объём",
+   "to": 5,
+   "from": 2
+  },
+  {
+   "name": "Блок 2: больше подходов",
+   "to": 9,
+   "from": 6
+  },
+  {
+   "name": "Блок 3: тяжелее",
+   "to": 11,
+   "from": 10
+  },
+  {
+   "name": "Разгрузка и тест",
+   "to": 12,
+   "from": 12
+  }
+ ],
+ "phaseNotes": {
+  "cal": "Подбор рабочих весов: последний подход каждого упражнения на RPE 7.",
+  "b1": "Объём: верх диапазона повторов — прибавляй вес.",
+  "b2": "В базовых упражнениях добавлен подход, работаем ближе к отказу.",
+  "b3": "Меньше повторов, больше вес в базе. Изоляция без изменений.",
+  "dl": "Разгрузка: половина подходов, RPE 6."
+ },
+ "days": {
+  "U1": {
+   "title": "Верх: жим и тяга",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Жим лёжа",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга штанги в наклоне",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Жим гантелей сидя",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга верхнего блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём штанги на бицепс",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Разгибания на блоке",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Жим лёжа",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "8–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга штанги в наклоне",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "8–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Жим гантелей сидя",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга верхнего блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём штанги на бицепс",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Разгибания на блоке",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Жим лёжа",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга штанги в наклоне",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Жим гантелей сидя",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга верхнего блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём штанги на бицепс",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Разгибания на блоке",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Жим лёжа",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга штанги в наклоне",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Жим гантелей сидя",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга верхнего блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём штанги на бицепс",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Разгибания на блоке",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Жим лёжа",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга штанги в наклоне",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Жим гантелей сидя",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга верхнего блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём штанги на бицепс",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Разгибания на блоке",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "L1": {
+   "title": "Низ: присед",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Приседания со штангой",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Румынская тяга",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Жим ногами",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём на носки",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Приседания со штангой",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "8–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Румынская тяга",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "8–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Жим ногами",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём на носки",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Приседания со штангой",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Румынская тяга",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Жим ногами",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём на носки",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Приседания со штангой",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Румынская тяга",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Жим ногами",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём на носки",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Приседания со штангой",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Румынская тяга",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Жим ногами",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём на носки",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "U2": {
+   "title": "Верх: наклонная и подтягивания",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Жим гантелей на наклонной",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга горизонтального блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Махи в стороны",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Молотки",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Французский жим",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Жим гантелей на наклонной",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "8–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "6–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга горизонтального блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Махи в стороны",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 15,
+         "note": "12–15, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Молотки",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Французский жим",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Жим гантелей на наклонной",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 4,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга горизонтального блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Махи в стороны",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Молотки",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Французский жим",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Жим гантелей на наклонной",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 7,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 6,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга горизонтального блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Махи в стороны",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 12,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Молотки",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Французский жим",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Жим гантелей на наклонной",
+       "group": "chest",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подтягивания",
+       "group": "back",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 6,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Тяга горизонтального блока",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Махи в стороны",
+       "group": "shoulders",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 12,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Молотки",
+       "group": "biceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Французский жим",
+       "group": "triceps",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  },
+  "L2": {
+   "title": "Низ: становая",
+   "phases": {
+    "cal": {
+     "items": [
+      {
+       "ex": "Становая тяга",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 6,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост со штангой",
+       "group": "glutes",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "подбор веса, последний подход RPE 7"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног в висе",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "RPE 7"
+        }
+       ]
+      }
+     ]
+    },
+    "b1": {
+     "items": [
+      {
+       "ex": "Становая тяга",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 6,
+         "note": "5–6, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "8–10, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост со штангой",
+       "group": "glutes",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "8–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 12,
+         "note": "10–12, RPE 7–8"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног в висе",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 15,
+         "note": "10–15, RPE 7–8"
+        }
+       ]
+      }
+     ]
+    },
+    "b2": {
+     "items": [
+      {
+       "ex": "Становая тяга",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 3,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост со штангой",
+       "group": "glutes",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног в висе",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "b3": {
+     "items": [
+      {
+       "ex": "Становая тяга",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 4,
+         "reps": 4,
+         "note": "тяжелее, RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост со штангой",
+       "group": "glutes",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 8,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног в висе",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 3,
+         "reps": 10,
+         "note": "RPE 8–9"
+        }
+       ]
+      }
+     ]
+    },
+    "dl": {
+     "items": [
+      {
+       "ex": "Становая тяга",
+       "group": "back",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 5,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Болгарские выпады",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Ягодичный мост со штангой",
+       "group": "glutes",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 8,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Сгибания ног в тренажёре",
+       "group": "legs",
+       "type": "strength",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      },
+      {
+       "ex": "Подъём ног в висе",
+       "group": "abs",
+       "type": "bodyweight",
+       "scheme": [
+        {
+         "n": 2,
+         "reps": 10,
+         "note": "разгрузка, RPE 6"
+        }
+       ]
+      }
+     ]
+    }
+   }
+  }
+ },
+ "test": {
+  "type": "T",
+  "title": "Тест: жим лёжа",
+  "note": "Разминка до 85% рабочего веса. Затем один подход на 5 повторов с RPE 9.",
+  "items": [
+   {
+    "ex": "Жим лёжа",
+    "group": "chest",
+    "type": "strength",
+    "scheme": [
+     {
+      "n": 1,
+      "reps": 5,
+      "note": "тест, RPE 9"
+     }
+    ]
+   }
+  ]
+ },
+ "goal": {
+  "ex": "Жим лёжа",
+  "gain": 0.12,
+  "maxReps": 10
+ },
+ "chartTitle": "Жим лёжа: расчётный максимум",
+ "rules": [
+  "RPE 7–8 значит 2–3 повтора в запасе, RPE 9 — один. До отказа в базовых упражнениях не работаем.",
+  "Двойная прогрессия: когда во всех подходах сделан верх диапазона с RPE ≤ 8, в следующий раз +2,5–5 кг (штанга) или +1–2 кг (гантели).",
+  "Записывай только рабочие подходы, разминку в схему не вноси.",
+  "Пропущенную тренировку не догоняем, идём дальше по расписанию.",
+  "Боль в суставах — сигнал снизить вес или заменить упражнение. Мышечная усталость — нормально.",
+  "Для роста массы нужен небольшой профицит калорий и 1,6–2 г белка на кг веса.",
+  "Раз в 4 недели замеряй обхваты груди, руки, бедра и талии."
+ ],
+ "coachNote": "Первая неделя — калибровка. Цель: +12% к расчётному максимуму в жиме лёжа, она посчитается после первой тренировки с жимом."
+}

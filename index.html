@@ -86,6 +86,31 @@
 
   /* Метки групп */
   .dot{width:10px;height:10px;border-radius:50%;background:var(--c);flex:none}
+  .day-pick{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-top:16px}
+  .dp{height:44px;border-radius:12px;border:0;background:var(--surface-2);color:var(--ink);font:inherit;font-weight:600;cursor:pointer}
+  .dp.on{background:var(--ink);color:var(--surface)}
+  .btn[disabled]{opacity:.45;pointer-events:none}
+  .row-between{display:flex;align-items:center;justify-content:space-between;gap:10px}
+  .lv-hero .lv-top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px}
+  .lv-big{font-size:56px;line-height:1;margin:2px 0}
+  .lv-bar{height:8px;border-radius:6px;background:var(--surface-2);overflow:hidden;margin-top:6px}
+  .lv-bar.big{height:12px;margin-top:14px}
+  .lv-bar i{display:block;height:100%;border-radius:inherit;background:var(--c,var(--g-back))}
+  .lv-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+  .lv{display:flex;gap:10px;align-items:center;background:var(--surface);border-radius:var(--r-md);padding:12px;min-width:0}
+  .lv-n{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;font-size:19px;color:#fff;background:var(--c)}
+  .lv-b{flex:1;min-width:0} .lv-name{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .lv-sub{font-size:12px;margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .seg{display:inline-flex;background:var(--surface-2);border-radius:999px;padding:3px}
+  .seg button{border:0;background:none;color:var(--mute);font:inherit;font-size:14px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+  .seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0/.15)}
+  .board{list-style:none;margin:10px 0 0;padding:0}
+  .board li{display:flex;align-items:center;gap:12px;padding:10px 4px;border-bottom:1px solid var(--line)}
+  .board li:last-child{border-bottom:0}
+  .board li.me{background:color-mix(in srgb,var(--g-back) 10%,transparent);border-radius:var(--r-sm);padding-inline:10px}
+  .board .rk{width:26px;font-size:17px;color:var(--mute)} .board .nm{flex:1;min-width:0;overflow-wrap:anywhere} .board b{font-size:18px}
+  .xp-toast{background:var(--surface);border-radius:var(--r-md);padding:14px 16px;margin-bottom:14px;box-shadow:inset 4px 0 0 var(--g-legs)}
+  .xp-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px} .xp-top b{font-size:24px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:500;padding:4px 10px 4px 8px;border-radius:999px;background:var(--surface-2)}
   .tag{font-size:12px;color:var(--mute);background:var(--surface-2);border-radius:6px;padding:1px 6px;white-space:nowrap}
