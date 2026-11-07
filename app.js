@@ -331,7 +331,7 @@ async function finishWorkout() {
     const before = xpStats(), gain = workoutXP(w);
     w.finished = true; w.end = Date.now(); await saveW(w);
     const total = Object.values(gain).reduce((a, b) => a + b, 0);
-    if (total) S.xpToast = { total, groups: Object.entries(gain).sort((a, b) => b[1] - a[1]),
+    if (total) S.xpToast = { wid: w.id, total, groups: Object.entries(gain).sort((a, b) => b[1] - a[1]),
       ups: Object.keys(gain).filter(g => lvlOf((before.m[g] || 0) + gain[g]) > lvlOf(before.m[g] || 0)).map(g => [g, lvlOf((before.m[g] || 0) + gain[g])]) };
     scheduleBoard();
   }
@@ -359,6 +359,13 @@ async function addSet(exId, card) {
 const shake = el => { el.classList.remove('shake'); void el.offsetWidth; el.classList.add('shake'); };
 async function delSet(exId, i) { const w = active(); w.entries.find(e => e.exId === exId).sets.splice(i, 1); await saveW(w); render(); }
 async function delEntry(exId) { const w = active(); w.entries = w.entries.filter(e => e.exId !== exId); await saveW(w); render(); }
+// Вернуть завершённую тренировку в активные (если случайно нажали «Завершить»). Только за последние 12 часов.
+const canReopen = w => w.finished && !active() && w.end && Date.now() - w.end < 12 * 3600e3;
+async function reopenWorkout(id) {
+  const w = S.workouts.find(x => x.id === id); if (!w || !canReopen(w)) return;
+  w.finished = false; delete w.end; await saveW(w);
+  S.xpToast = null; S.tab = 'today'; S.selDay = null; render(true);
+}
 async function delWorkout(id) {
   if (!confirm('Удалить тренировку из истории?')) return;
   await dataDel('workouts', id); S.workouts = S.workouts.filter(w => w.id !== id); render();
@@ -700,7 +707,8 @@ function viewToday() {
   const xt = S.xpToast;
   const xpNote = xt ? `<section class="xp-toast" role="status"><div class="xp-top"><b class="num">+${xt.total} XP</b><button class="icon-btn" data-a="xpClose" aria-label="Закрыть">${ICON.x}</button></div>
       <div class="chips">${xt.groups.map(([g, v]) => `<span class="chip"><span class="dot" style="--c:${gc(g)}"></span>${GROUPS[g]} +${v}</span>`).join('')}</div>
-      ${xt.ups.length ? `<p style="margin-top:8px"><b>Новый уровень:</b> ${xt.ups.map(([g, l]) => `${GROUPS[g]} ${l}`).join(', ')}</p>` : ''}</section>` : '';
+      ${xt.ups.length ? `<p style="margin-top:8px"><b>Новый уровень:</b> ${xt.ups.map(([g, l]) => `${GROUPS[g]} ${l}`).join(', ')}</p>` : ''}
+      ${xt.wid ? `<button class="btn ghost sm" style="margin-top:8px" data-a="reopenWorkout" data-id="${xt.wid}">Завершили по ошибке? Продолжить</button>` : ''}</section>` : '';
   return `<header class="head"><div><h1>${DOW_FULL[today]}</h1><div class="sub">${longDate(Date.now())}</div></div>${avatarBtn()}</header>
     ${xpNote}${mergeOffer()}
     ${weekStrip(sel)}
@@ -966,6 +974,7 @@ function workoutCard(w) {
       <div class="grow"><div style="font-weight:600">${esc(w.title || 'Тренировка')}</div>
       <div class="mute small">${shortDate(w.start)}, ${mins(w)} мин${vol ? `, объём ${Math.round(vol).toLocaleString('ru-RU')} кг` : ''}</div></div>
       <button class="icon-btn" data-a="delWorkout" data-id="${w.id}" aria-label="Удалить тренировку">${ICON.x}</button></div>
+    ${canReopen(w) ? `<div class="item" style="min-height:0;padding:6px 16px 12px"><button class="btn sm" style="white-space:nowrap" data-a="reopenWorkout" data-id="${w.id}">Продолжить</button><span class="mute small">если завершили по ошибке</span></div>` : ''}
     ${w.entries.map(e => { const ex = exById(e.exId); return `<div class="item" style="align-items:flex-start;min-height:0;padding:10px 16px">
       <span class="dot" style="--c:${gc(ex?.group)};margin-top:7px"></span><div class="grow"><div>${ex ? esc(ex.name) : 'удалено'}</div>
       <div class="mute small">${e.sets.map(s => fmtSet(ex ? ex.type : 'strength', s)).join(' / ')}</div></div></div>`; }).join('')}</div>`;
@@ -1461,6 +1470,7 @@ document.addEventListener('click', ev => {
     delSet: () => delSet(exId, i),
     delEntry: () => delEntry(exId),
     delWorkout: () => delWorkout(id),
+    reopenWorkout: () => reopenWorkout(id),
     tplNew: newTemplate,
     tplToggle: () => { S.editTpl = S.editTpl === id ? null : id; render(); },
     tplDel: () => deleteTemplate(id),
